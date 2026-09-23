@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Procesador de diccionario — Comandarina</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #E1E1F5; }
+  :root {
+    --naranja: #FF5023;
+    --navy: #3938A0;
+    --fondo: #E1E1F5;
+    --texto: #3B3B3B;
+    --muted: #9ca3af;
+    --border: rgba(57,56,160,0.12);
+  }
+  #vc-app { font-family: 'Barlow', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: var(--texto); max-width: 1000px; background: var(--fondo); padding: 20px; border-radius: 16px; }
+  #vc-app * { box-sizing: border-box; font-family: inherit; }
+
+  .vc-hero { position: relative; overflow: hidden; background: var(--naranja); border-radius: 12px; padding: 28px 30px; margin-bottom: 20px; }
+  .vc-hero::before { content: ''; position: absolute; top: -50px; right: -30px; width: 170px; height: 170px; border-radius: 50%; background: rgba(255,255,255,0.14); }
+  .vc-hero::after { content: ''; position: absolute; bottom: -55px; right: 90px; width: 110px; height: 110px; border-radius: 50%; background: rgba(255,255,255,0.10); }
+  .vc-h1 { position: relative; font-size: 24px; font-weight: 800; margin: 0 0 6px; color: #fff; letter-spacing: -0.2px; }
+  .vc-sub { position: relative; font-size: 13.5px; font-weight: 400; color: #fff; opacity: .92; margin: 0; max-width: 640px; line-height: 1.5; }
+  .vc-eyebrow { position: relative; display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--naranja); background: #fff; border-radius: 20px; padding: 3px 10px; margin-bottom: 10px; }
+
+  .vc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .vc-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .vc-card label { display: block; font-size: 12.5px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+  .vc-card input[type=file] { font-size: 11px; width: 100%; color: var(--texto); }
+  .vc-status { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-top: 8px; min-height: 14px; }
+  .vc-status.ok { color: var(--naranja); }
+
+  .vc-btn { font-family: 'Barlow', sans-serif; background: var(--naranja); color: #fff; border: none; border-radius: 8px; padding: 11px 22px; font-size: 14.5px; font-weight: 700; cursor: pointer; transition: opacity .15s; }
+  .vc-btn:hover { opacity: .88; }
+  .vc-btn:disabled { background: var(--muted); cursor: not-allowed; }
+  .vc-btn.navy { background: var(--navy); }
+  .vc-btn.ghost { background: #fff; color: var(--texto); border: 1.5px solid var(--muted); padding: 6px 14px; font-size: 12px; font-weight: 600; }
+  .vc-btn.ghost:hover { background: #f3f4f6; opacity: 1; }
+
+  .vc-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 10px; margin: 22px 0; }
+  .vc-metric { border-radius: 12px; padding: 14px 16px; background: #fff; border: 1px solid var(--border); }
+  .vc-metric .n { font-size: 26px; font-weight: 800; display: block; color: var(--naranja); line-height: 1.1; }
+  .vc-metric .l { font-size: 11.5px; font-weight: 600; color: var(--texto); }
+
+  .vc-section { background: #fff; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
+  .vc-section-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #fff; cursor: pointer; gap: 10px; border-bottom: 1px solid var(--border); }
+  .vc-section-head h3 { margin: 0; font-size: 14px; font-weight: 700; color: var(--navy); display: flex; align-items: center; }
+  .vc-section-body { padding: 14px 16px; display: none; }
+  .vc-section-body.open { display: block; }
+  .vc-note { font-size: 11.5px; color: var(--muted); margin: 0 0 10px; }
+
+  .vc-pill { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 3px 11px; border-radius: 20px; margin-left: 10px; }
+  .vc-pill.paid { background: #dcfce7; color: #15803d; }
+  .vc-pill.pending { background: #fef9c3; color: #854d0e; }
+  .vc-pill.refunded { background: #f3e8ff; color: #7e22ce; }
+  .vc-pill.cancelled { background: #fee2e2; color: #991b1b; }
+
+  .vc-table-wrap { max-height: 260px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+  table.vc-t { border-collapse: collapse; width: 100%; font-size: 11.5px; }
+  table.vc-t thead th { position: sticky; top: 0; background: var(--navy); color: #fff; text-align: left; padding: 8px 9px; font-weight: 700; }
+  table.vc-t td { padding: 6px 9px; border-bottom: 1px solid var(--border); white-space: nowrap; color: var(--texto); }
+  table.vc-t tr:nth-child(even) td { background: #FAFAFF; }
+
+  .vc-tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+  .vc-tab { font-family: 'Barlow', sans-serif; background: #fff; color: var(--texto); border: 1.5px solid var(--border); border-radius: 8px; padding: 9px 18px; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+  .vc-tab.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .vc-tab:not(.active):hover { background: var(--fondo); }
+
+  .vc-rule-card { background: var(--fondo); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
+  .vc-rule-card h4 { margin: 0 0 4px; font-size: 13px; font-weight: 700; color: var(--navy); }
+  .vc-rule-card p { margin: 0; font-size: 12.5px; color: var(--texto); line-height: 1.5; }
+  .vc-log { font-size: 11.5px; font-weight: 600; color: var(--navy); margin-left: 12px; }
+  .vc-inputrow input[type=text] { font-family: inherit; }
+</style>
+</head>
+<body>
+
+<div id="vc-app">
+  <div class="vc-hero">
+    <span class="vc-eyebrow">Fudo ↔ Odoo</span>
+    <p class="vc-h1">Procesador de diccionario</p>
+  </div>
+
+  <div class="vc-tabs">
+    <button class="vc-tab active" id="tab-etapa1" onclick="vcSetEtapa(1)">Etapa 1 · Odoo</button>
+    <button class="vc-tab" id="tab-etapa2" onclick="vcSetEtapa(2)">Etapa 2 · Dash</button>
+    <button class="vc-tab" id="tab-etapa3" onclick="vcSetEtapa(3)">Próximamente</button>
+  </div>
+
+  <div id="etapa1-panel">
+    <div class="vc-card" style="max-width:340px; margin-bottom:16px;">
+      <label>Compañía</label>
+      <select id="sel-compania" onchange="vcSetCompania(this.value)" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:13px; color:var(--texto); background:#fff;">
+        <option value="comandarina_srl">Comandarina S.R.L. (Argentina)</option>
+        <option value="anser_indicus">Anser Indicus SpA (Chile)</option>
+        <option value="comandarina_mx">Comandarina SA de CV (México)</option>
+        <option value="fudo_group">Fudo Group LLC</option>
+      </select>
+    </div>
+
+    <div id="etapa1-comandarina_srl">
+      <div class="vc-grid">
+        <div class="vc-card">
+          <label>1. Odoo (Contacto res_partner) — .xlsx o .csv, con External ID y Tipo de identificación</label>
+          <input type="file" id="f-odoo" accept=".xlsx,.csv" />
+          <div class="vc-status pending" id="s-odoo">Sin cargar</div>
+        </div>
+        <div class="vc-card">
+          <label>2. Dash — Accounts + Billing (.zip)</label>
+          <input type="file" id="f-dashzip" accept=".zip" />
+          <div class="vc-status pending" id="s-dashzip">Sin cargar</div>
+        </div>
+        <div class="vc-card">
+          <label>3. Metabase AFIP/ARCA (xlsx)</label>
+          <input type="file" id="f-metabase" accept=".xlsx" />
+          <div class="vc-status pending" id="s-metabase">Sin cargar</div>
+        </div>
+        <div class="vc-card">
+          <label>4. Admin emails (csv)</label>
+          <input type="file" id="f-admin" accept=".csv" />
+          <div class="vc-status pending" id="s-admin">Sin cargar</div>
+        </div>
+      </div>
+
+      <button class="vc-btn" id="btn-process" disabled>Procesar archivos</button>
+      <span class="vc-log" id="proc-log"></span>
+
+      <div id="results" style="margin-top:24px; display:none;"></div>
+    </div>
+
+    <div id="etapa1-proximamente" style="display:none;">
+      <div class="vc-card" style="text-align:center; padding:36px 20px; color:var(--muted);">
+        <p style="margin:0; font-size:14px; font-weight:600;">🚧 Próximamente</p>
+        <p style="margin:6px 0 0; font-size:12.5px;">Todavía no está armado el procesamiento para esta compañía. Pedilo cuando lo necesites y lo sumamos.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="etapa2-panel" style="display:none;">
+    <div class="vc-grid">
+      <div class="vc-card">
+        <label>1. Odoo actualizado (Contacto res_partner) — .xlsx o .csv, con dirección completa</label>
+        <input type="file" id="f2-odoo" accept=".xlsx,.csv" />
+        <div class="vc-status pending" id="s2-odoo">Sin cargar</div>
+      </div>
+      <div class="vc-card">
+        <label>2. Dash — Accounts + Billing (.zip)</label>
+        <input type="file" id="f2-dashzip" accept=".zip" />
+        <div class="vc-status pending" id="s2-dashzip">Sin cargar</div>
+      </div>
+    </div>
+
+    <button class="vc-btn" id="btn-process-2" disabled>Procesar archivos</button>
+    <span class="vc-log" id="proc-log-2"></span>
+
+    <div id="results-2" style="margin-top:24px; display:none;"></div>
+  </div>
+
+  <div id="etapa3-panel" style="display:none;">
+    <p class="vc-note" style="margin-top:0;">
+      Ideas y pedidos que fueron surgiendo pero todavía no se programaron — se editan directo en el
+      <a href="https://docs.google.com/spreadsheets/d/1e6qAnhdD1PQefr--q0vfg-6tp1dechYXiNKY0lldV8M/edit?gid=0#gid=0" target="_blank" style="color:var(--navy);font-weight:700;">Google Sheet "Próximamente"</a>
+      (agregar, editar o borrar filas ahí, sin tocar código) — <button class="vc-btn ghost" onclick="cargarProximamente()" style="padding:4px 12px;">Actualizar</button>
+    </p>
+    <div id="proximamente-status" class="vc-log" style="margin-left:0;"></div>
+    <div id="proximamente-cards"></div>
+  </div>
+
+  <div class="vc-section" style="margin-top:24px;" id="sec-reglas-wrap">
+    <div class="vc-section-head" onclick="vcToggle('sec-reglas')">
+      <h3>Reglas activas</h3>
+      <span class="vc-btn ghost">Ver</span>
+    </div>
+    <div class="vc-section-body" id="sec-reglas">
+      <p class="vc-note" style="margin-top:0;">Esto es de solo lectura: refleja la lógica que corre hoy en esta versión del archivo. Para cambiar una regla no se edita acá — se pide el cambio directamente y se sube el archivo actualizado a GitHub, así todo el equipo ve siempre la misma versión y queda el historial en los commits del repo.</p>
+      <div id="reglas-cards"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const REGLAS_ETAPA1 = [
+    { titulo: 'Prioridad de fuente', texto: 'Si Billing.Código existe (CUIT/DNI real), Billing manda. Si Billing.Código NO existe (Sin datos/0), se consulta Metabase (aprobado) como respaldo.' },
+    { titulo: 'Cuentas internas (Fudo/Deli) — exclusión previa', texto: 'Si el Estado comercial de la cuenta en Dash es "Activo" Y el mail del admin con más logins termina en @fu.do o @deli.com.br, la cuenta se excluye por completo del análisis (no entra a ninguna regla, no se crea ni se modifica en Odoo). Se muestra como alerta aparte con el nombre y el link a Dash. La modificación de su estado en Dash se hace manualmente, fuera de esta herramienta. Excepción confirmada que NO se marca como interna: Referencia 154948 (tienda_cholita), cuenta real revisada a mano.' },
+    { titulo: 'Regla 1 — OK, sin acción', texto: 'Billing.Código existe, NIF = Código, Mail = Email, y el contacto está Activo en Odoo. Incluye el caso "Aprobado": sin billing, sin Metabase, ya existe en Odoo como Consumidor Final → no se toca.' },
+    { titulo: 'Regla 1b — Reactivar', texto: 'Igual que la Regla 1 (NIF y mail coinciden) pero el contacto está Archivado en Odoo → se genera una actualización que pone Activo = TRUE (cliente viejo que volvió a facturar). Las reglas 2, 3b y 4a también reactivan automáticamente si encuentran el contacto archivado.' },
+    { titulo: 'Regla 2 — Actualizar mail', texto: 'Billing.Código existe, NIF = Código, Mail ≠ Email → se actualiza solo el mail.' },
+    { titulo: 'Regla 2b — Actualizar nombre (Consumidor Final)', texto: 'Sin billing, sin Metabase, ya existe en Odoo, y el Nombre de la cuenta en Dash cambió respecto al de Odoo → se actualiza solo el Nombre. No aplica cuando hay billing (ahí Odoo ya está validado contra ARCA y manda).' },
+    { titulo: 'Regla 2c — Actualizar mail admin (mantenimiento)', texto: 'Mismo universo que la Regla 2b (sin billing, sin Metabase, ya existe en Odoo). El mail actual de Odoo sigue "vigente" solo si tiene formato válido Y login de menos de 3 meses (contra la fecha real del análisis). Si no, se reemplaza — priorizando siempre que el mail sea válido por sobre qué tan reciente sea el login (ahí se mandan las facturas, un mail inválido no sirve aunque tenga actividad reciente). Orden de prioridad para el reemplazo: 1) válido y con login reciente, 2) válido aunque el login no sea tan reciente, 3) sin ningún válido disponible, el de login reciente aunque sea inválido, 4) caso raro sin nada de lo anterior: el de más logins entre todos. Si en la misma corrida también cambió el Nombre (Regla 2b), se combina todo en una sola fila con Grupo "Regla 2b/2c". No aplica a la Regla 4a (Metabase), que ya compara y actualiza el mail admin como parte de su propia lógica.' },
+    { titulo: 'Regla 3a — Baja + Alta', texto: 'Billing.Código existe, NIF ≠ Código, y el NIF de Odoo NO está vacío (otra razón social / otro CUIT) → se da de baja el contacto viejo y se crea uno nuevo con los datos de Billing.' },
+    { titulo: 'Regla 3b — Actualizar mismo contacto', texto: 'Billing.Código existe, NIF ≠ Código, y el NIF de Odoo SÍ está vacío (nunca tuvo uno cargado) → se actualiza el contacto existente en vez de dar de baja.' },
+    { titulo: 'Regla 4a — Actualizar vía Metabase', texto: 'Billing.Código NO existe, Odoo ya existe, Metabase aprobado → se compara el NIF de Odoo contra el CUIT de Metabase y el mail de Odoo contra el mail del admin. Si ambos ya coinciden, sin acción (o solo reactivar, si estaba archivado). Si alguno no coincide, se actualiza solo ese dato — Nombre y Responsabilidad AFIP quedan sin tocar, porque Odoo los corrige solo vía ARCA una vez que el NIF está bien.' },
+    { titulo: 'Regla 4b — Alta vía Metabase', texto: 'Billing.Código NO existe, Odoo no existe, Metabase aprobado → alta nueva con datos de Metabase.' },
+    { titulo: 'Regla 5 — Alta directa', texto: 'Billing.Código existe, Odoo no existe → alta nueva con datos de Billing (respeta si es CUIT o DNI).' },
+    { titulo: 'Regla 6 — Alta Consumidor Final', texto: 'Billing.Código NO existe, Metabase sin aprobado, Odoo no existe → alta como Consumidor Final sin NIF, tipo de identificación Sigd.' },
+    { titulo: 'Output 2 vs Output 3 — Tipo de Responsabilidad AFIP', texto: 'En el Output 2 (actualizaciones) la Responsabilidad AFIP refleja la situación fiscal real, mapeada de Billing/Metabase. En el Output 3 (altas nuevas) va siempre fija en "Consumidor Final", porque ARCA la actualiza sola después.' },
+    { titulo: 'Formato de entrada de Odoo', texto: 'Acepta .xlsx o .csv, formato viejo (headers en español) o nuevo (técnico, con External ID y Tipo de identificación adelante). El Tipo de identificación en Odoo viaja junto con el NIF en las reglas 3b/4a para evitar el error "Longitud inválida".' },
+    { titulo: 'Output 1 — Análisis completo', texto: 'Una fila por cada cuenta AR con la regla y acción aplicada. Sirve de backup/auditoría de cada corrida.' },
+    { titulo: 'Output 2 — Actualizar contactos en Odoo', texto: 'Incluye reglas 1b, 2, 2b, 3a (baja), 3b y 4a. Solo columna "External ID" (sin ID de base de datos) — al importar, mapear "External ID" al campo External ID para que actualice en vez de crear. Trae columna "Grupo" (qué regla aplicó) y "Comentario" (avisos a revisar antes de importar, ninguna se pisa).' },
+    { titulo: 'Output 3 — Alta de contactos en Odoo', texto: 'Incluye reglas 3a (alta), 4b, 5 y 6. Plantilla Comandarina, sin columna ID. Sub-casos: CUIT, DNI (con domicilio/ciudad), Sin datos (Sigd), 4b (Metabase), 3a-alta. Prioridad de mail: Billing.Email si existe, si no Admin (Dash). Trae columna "Comentario" con avisos a revisar antes de importar.' },
+    { titulo: 'Cómo se elige el mail del admin (todas las reglas)', texto: 'Entre todos los admins de una cuenta (reporte admin_emails.csv, que ya viene filtrado por Dash a solo usuarios con Admin = Sí), se prioriza primero que el mail tenga formato válido (no sirve el usuario de login interno de Dash, tipo "dev@milanpunto" — ahí no llegan las facturas), y recién entre los que tienen mail válido, el de más logins. Si ninguno tiene mail válido, se usa igual el de más logins (va a quedar marcado para revisión por formato inválido).' },
+    { titulo: 'Revisión manual por mail (Output 2 y 3)', texto: 'Si la cuenta no tiene ningún admin en absoluto (0 filas en admin_emails.csv — la cuenta nunca tuvo un usuario marcado Admin = Sí en Dash, hay que avisarle al cliente para que designe uno), o si el mail resuelto tiene tildes, espacios de más, o formato inválido, esa cuenta NO se incluye en el Output 2/3 — queda afuera del archivo de importación. El banner de arriba muestra el detalle completo (cuenta + qué falta) directamente, para resolverlo a mano antes de la próxima corrida.' },
+    { titulo: 'Mapeo de situación fiscal (Dash/Metabase → Odoo)', texto: 'Responsable inscripto / responsable_inscripto → IVA Responsable Inscripto. Monotributo / monotributista → Responsable Monotributo. Consumidor final → Consumidor Final. Exento → IVA Sujeto Exento. (Solo aplica en Output 2, no en Output 3).' }
+  ];
+
+  const REGLAS_ETAPA2 = [
+    { titulo: 'Condición', texto: 'La cuenta existe en el reporte de Accounts de Dash (Argentina), la Referencia existe en Odoo, Odoo.NIF (Código) tiene valor, y Billing.Código está vacío para esa cuenta → se arma la fila de import para Dash. No depende de qué regla de la Etapa 1 la generó (Metabase, carga manual, etc.), solo del estado final en Odoo vs Dash. Si la cuenta no aparece en Accounts, no se toca nada aunque Odoo tenga el NIF cargado.' },
+    { titulo: 'Contactos excluidos', texto: 'Se ignoran los contactos Archivados en Odoo y las Referencias con sufijo "_old" (bajas de una corrida anterior de la Etapa 1) — no participan del cruce. Este filtro ya está aplicado siempre, aunque el número total resultante sea grande: representa el acumulado histórico de todas las correcciones hechas en Odoo que Dash todavía no tiene, no solo las de la última corrida.' },
+    { titulo: 'Cuentas internas (Fudo/Deli) — limitación', texto: 'La Etapa 2 no vuelve a chequear el Estado comercial ni el mail de admin (no carga esos archivos acá). Si una cuenta interna llegó a tener NIF cargado en Odoo antes de que existiera este chequeo, podría aparecer en el resultado — revisar manualmente si aparece algo sospechoso.' },
+    { titulo: 'Mapeo de campos (Odoo → Dash)', texto: 'ID = Referencia. Tipo de identificación = Odoo.Tipo de Identificación (ya sin el sufijo " (AR)"). Código = Odoo.NIF. Razón social = Odoo.Nombre. Ciudad = Odoo.Ciudad. Estado = Odoo.Provincia. Domicilio = Odoo.Calle. Código postal = Odoo.C.P. Email = Odoo.Correo electrónico.' },
+    { titulo: 'Mapeo de situación fiscal (Odoo → Dash)', texto: 'IVA Responsable Inscripto → Responsable inscripto. Responsable Monotributo → Monotributo. Consumidor Final → Consumidor final. IVA Sujeto Exento → Exento. (Es el mapeo inverso al de la Etapa 1). Excepción: si da "Consumidor final" pero la cuenta ya tiene un NIF real cargado, se corrige a "Monotributo" (inconsistencia típica).' },
+    { titulo: 'Limpieza de texto para el CSV de Dash', texto: 'Se sacan las comillas (" y \\\') de todos los campos, y las comas dentro de un campo se reemplazan por punto y coma — para que no rompan el formato CSV separado por comas que pide Dash.' },
+    { titulo: 'Todos los campos son obligatorios', texto: 'Dash exige los 9 campos del template (ID, Tipo de identificación, Código, Razón social, Ciudad, Estado, Domicilio, Situación ante el impuesto, Email, Código postal). Si a una cuenta le falta alguno, no entra al archivo de import: va al archivo de revisión.' },
+    { titulo: 'Dos archivos de salida', texto: 'Import a Dash: filas 100% completas, listas para subir (CSV separado por comas). Revisar antes de importar: filas con algún dato faltante, con cada campo vacío marcado puntualmente (ej. "FALTA CIUDAD") para completar a mano.' }
+  ];
+
+  // "Próximamente" ya no es una lista fija en el código: se carga en vivo desde el Google Sheet
+  // (ver cargarProximamente() más abajo), así se puede editar sin tocar el archivo.
+
+  // --- Descompresor DEFLATE propio (reemplaza pako), sin dependencias externas ---
+  function inflateRaw(input){
+    const LENGTH_BASE = [3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258];
+    const LENGTH_EXTRA = [0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0];
+    const DIST_BASE = [1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577];
+    const DIST_EXTRA = [0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];
+    const CLC_ORDER = [16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];
+    let bytePos = 0, bitBuf = 0, bitCount = 0;
+    function getBit(){ if(bitCount===0){ bitBuf = input[bytePos++]; bitCount = 8; } const b = bitBuf & 1; bitBuf >>= 1; bitCount--; return b; }
+    function getBits(n){ let v=0; for(let i=0;i<n;i++) v |= getBit() << i; return v; }
+    function alignByte(){ bitBuf=0; bitCount=0; }
+    function buildTree(lengths, num){
+      const counts = new Uint16Array(16);
+      const symbols = new Uint16Array(num);
+      for(let i=0;i<num;i++) counts[lengths[i]]++;
+      counts[0] = 0;
+      const offs = new Uint16Array(16);
+      for(let i=1;i<16;i++) offs[i] = offs[i-1] + counts[i-1];
+      for(let i=0;i<num;i++){ if(lengths[i]) symbols[offs[lengths[i]]++] = i; }
+      return { counts, symbols };
+    }
+    function decodeSymbol(tree){
+      let base=0, offs=0;
+      for(let len=1; len<=15; len++){
+        offs = 2*offs + getBit();
+        base += tree.counts[len];
+        offs -= tree.counts[len];
+        if(offs < 0) return tree.symbols[base+offs];
+      }
+      throw new Error('Huffman code invalido');
+    }
+    let out = new Uint8Array(Math.max(1024, input.length * 4));
+    let outPos = 0;
+    function ensure(n){
+      if(outPos + n > out.length){
+        let newLen = out.length * 2;
+        while(newLen < outPos + n) newLen *= 2;
+        const bigger = new Uint8Array(newLen);
+        bigger.set(out.subarray(0, outPos));
+        out = bigger;
+      }
+    }
+    function inflateStoredBlock(){
+      alignByte();
+      const len = input[bytePos] | (input[bytePos+1] << 8);
+      bytePos += 4;
+      ensure(len);
+      for(let i=0;i<len;i++) out[outPos++] = input[bytePos++];
+    }
+    function inflateBlockData(lt, dt){
+      for(;;){
+        const sym = decodeSymbol(lt);
+        if(sym === 256) return;
+        if(sym < 256){ ensure(1); out[outPos++] = sym; continue; }
+        const li = sym - 257;
+        const length = LENGTH_BASE[li] + getBits(LENGTH_EXTRA[li]);
+        const dsym = decodeSymbol(dt);
+        const dist = DIST_BASE[dsym] + getBits(DIST_EXTRA[dsym]);
+        ensure(length);
+        let from = outPos - dist;
+        for(let i=0;i<length;i++){ out[outPos++] = out[from++]; }
+      }
+    }
+    let fixedLt=null, fixedDt=null;
+    function getFixedTrees(){
+      if(fixedLt) return [fixedLt, fixedDt];
+      const litLengths = new Uint8Array(288);
+      for(let i=0;i<144;i++) litLengths[i]=8;
+      for(let i=144;i<256;i++) litLengths[i]=9;
+      for(let i=256;i<280;i++) litLengths[i]=7;
+      for(let i=280;i<288;i++) litLengths[i]=8;
+      fixedLt = buildTree(litLengths, 288);
+      const distLengths = new Uint8Array(30).fill(5);
+      fixedDt = buildTree(distLengths, 30);
+      return [fixedLt, fixedDt];
+    }
+    function inflateDynamicBlock(){
+      const hlit = getBits(5) + 257;
+      const hdist = getBits(5) + 1;
+      const hclen = getBits(4) + 4;
+      const clcLengths = new Uint8Array(19);
+      for(let i=0;i<hclen;i++) clcLengths[CLC_ORDER[i]] = getBits(3);
+      const clcTree = buildTree(clcLengths, 19);
+      const lengths = new Uint8Array(hlit + hdist);
+      let i=0;
+      while(i < hlit + hdist){
+        const sym = decodeSymbol(clcTree);
+        if(sym < 16){ lengths[i++] = sym; }
+        else if(sym === 16){ const rep=getBits(2)+3; const prev=lengths[i-1]; for(let r=0;r<rep;r++) lengths[i++]=prev; }
+        else if(sym === 17){ const rep=getBits(3)+3; for(let r=0;r<rep;r++) lengths[i++]=0; }
+        else { const rep=getBits(7)+11; for(let r=0;r<rep;r++) lengths[i++]=0; }
+      }
+      const lt = buildTree(lengths.subarray(0, hlit), hlit);
+      const dt = buildTree(lengths.subarray(hlit), hdist);
+      inflateBlockData(lt, dt);
+    }
+    for(;;){
+      const final = getBit();
+      const type = getBits(2);
+      if(type === 0) inflateStoredBlock();
+      else if(type === 1){ const [lt,dt] = getFixedTrees(); inflateBlockData(lt, dt); }
+      else if(type === 2) inflateDynamicBlock();
+      else throw new Error('Tipo de bloque invalido');
+      if(final) break;
+    }
+    return out.subarray(0, outPos);
+  }
+
+  const state = { odoo:null, accounts:null, billing:null, metabase:null, admin:null };
+
+  function readZipEntries(arrayBuffer){
+    const buf = new Uint8Array(arrayBuffer);
+    const dv = new DataView(arrayBuffer);
+    let eocd = -1;
+    for(let i = buf.length - 22; i >= 0; i--){
+      if(buf[i]===0x50 && buf[i+1]===0x4b && buf[i+2]===0x05 && buf[i+3]===0x06){ eocd = i; break; }
+    }
+    if(eocd === -1) throw new Error('No se encontró el índice del zip (EOCD)');
+    const cdEntries = dv.getUint16(eocd + 10, true);
+    let offset = dv.getUint32(eocd + 16, true);
+    const entries = [];
+    for(let i=0; i<cdEntries; i++){
+      const sig = dv.getUint32(offset, true);
+      if(sig !== 0x02014b50) break;
+      const compressionMethod = dv.getUint16(offset + 10, true);
+      const compressedSize = dv.getUint32(offset + 20, true);
+      const uncompressedSize = dv.getUint32(offset + 24, true);
+      const fnLen = dv.getUint16(offset + 28, true);
+      const extraLen = dv.getUint16(offset + 30, true);
+      const commentLen = dv.getUint16(offset + 32, true);
+      const localHeaderOffset = dv.getUint32(offset + 42, true);
+      const name = new TextDecoder('utf-8').decode(buf.slice(offset + 46, offset + 46 + fnLen));
+      entries.push({name, compressionMethod, compressedSize, uncompressedSize, localHeaderOffset});
+      offset += 46 + fnLen + extraLen + commentLen;
+    }
+    return entries;
+  }
+
+  function extractZipEntryText(arrayBuffer, entry){
+    const buf = new Uint8Array(arrayBuffer);
+    const dv = new DataView(arrayBuffer);
+    const lo = entry.localHeaderOffset;
+    const fnLen = dv.getUint16(lo + 26, true);
+    const extraLen = dv.getUint16(lo + 28, true);
+    const dataStart = lo + 30 + fnLen + extraLen;
+    const compressed = buf.slice(dataStart, dataStart + entry.compressedSize);
+    let out;
+    if(entry.compressionMethod === 0) out = compressed;
+    else if(entry.compressionMethod === 8) out = inflateRaw(compressed);
+    else throw new Error('Método de compresión no soportado (' + entry.compressionMethod + ')');
+    return new TextDecoder('utf-8').decode(out);
+  }
+
+  function setStatus(id, text, ok){
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = 'vc-status' + (ok ? ' ok' : '');
+  }
+  function checkReady(){
+    document.getElementById('btn-process').disabled = !(state.odoo && state.accounts && state.billing && state.metabase && state.admin);
+  }
+
+  function normDigits(v){ return (v==null?'':String(v)).replace(/\D/g,''); }
+  function normEmail(v){ return (v==null?'':String(v)).trim().toLowerCase(); }
+  function normId(v){
+    if(v==null || v==='') return null;
+    const n = parseInt(String(v).trim(), 10);
+    return isNaN(n) ? null : String(n);
+  }
+
+  // --- Lector XLSX propio (zip + parser por regex, sin DOMParser: mucho mas rapido con archivos grandes
+  //     o con muchos hipervinculos, que generan decenas de miles de textos compartidos) ---
+  function colToIndex(ref){
+    const m = ref.match(/^[A-Z]+/);
+    const letters = m ? m[0] : 'A';
+    let idx = 0;
+    for(let i=0;i<letters.length;i++){ idx = idx*26 + (letters.charCodeAt(i)-64); }
+    return idx-1;
+  }
+  function xmlUnescape(s){
+    // El &amp; se resuelve primero para poder manejar entidades doblemente escapadas
+    // (ej: "&amp;#209;" en vez de "&#209;", que a veces genera Excel al re-exportar).
+    return s
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+      .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+      .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(parseInt(d, 10)));
+  }
+  function parseSharedStrings(xmlText){
+    if(!xmlText) return [];
+    const arr = [];
+    const siRegex = /<si[^>]*>([\s\S]*?)<\/si>/g;
+    const tRegex = /<t[^>]*>([\s\S]*?)<\/t>/g;
+    let m;
+    while((m = siRegex.exec(xmlText))){
+      let text = '', tm;
+      tRegex.lastIndex = 0;
+      while((tm = tRegex.exec(m[1]))){ text += xmlUnescape(tm[1]); }
+      arr.push(text);
+    }
+    return arr;
+  }
+  function parseSheetRows(xmlText, sharedStrings){
+    const rowRegex = /<row\b[^>]*>([\s\S]*?)<\/row>/g;
+    const cellRegex = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
+    const aoa = [];
+    let maxCol = 0;
+    let rm;
+    while((rm = rowRegex.exec(xmlText))){
+      const rowArr = [];
+      cellRegex.lastIndex = 0;
+      let cm, ci = 0;
+      while((cm = cellRegex.exec(rm[1]))){
+        const attrs = cm[1] || '';
+        const inner = cm[2] || '';
+        const refMatch = attrs.match(/r="([^"]+)"/);
+        const colIdx = refMatch ? colToIndex(refMatch[1]) : ci;
+        const typeMatch = attrs.match(/t="([^"]+)"/);
+        const t = typeMatch ? typeMatch[1] : null;
+        let value = '';
+        if(t === 'inlineStr'){
+          const isMatch = inner.match(/<is>([\s\S]*?)<\/is>/);
+          if(isMatch){
+            const tRe = /<t[^>]*>([\s\S]*?)<\/t>/g;
+            let tm, text = '';
+            while((tm = tRe.exec(isMatch[1]))){ text += xmlUnescape(tm[1]); }
+            value = text;
+          }
+        } else {
+          const vMatch = inner.match(/<v>([\s\S]*?)<\/v>/);
+          const raw = vMatch ? xmlUnescape(vMatch[1]) : '';
+          if(t === 's'){ const idx = parseInt(raw,10); value = sharedStrings[idx] !== undefined ? sharedStrings[idx] : ''; }
+          else if(t === 'str'){ value = raw; }
+          else if(t === 'b'){ value = raw === '1'; }
+          else if(raw === ''){ value = ''; }
+          else { const n = parseFloat(raw); value = isNaN(n) ? raw : n; }
+        }
+        rowArr[colIdx] = value;
+        if(colIdx > maxCol) maxCol = colIdx;
+        ci++;
+      }
+      aoa.push(rowArr);
+    }
+    if(!aoa.length) return [];
+    // Deduplicar headers repetidos (ej: dos columnas "ID"): la segunda pasa a llamarse "ID (2)".
+    const header = [];
+    const vistos = {};
+    for(let i=0;i<=maxCol;i++){
+      const raw = aoa[0][i] !== undefined ? String(aoa[0][i]) : '';
+      if(vistos[raw] === undefined){ vistos[raw] = 0; header.push(raw); }
+      else { vistos[raw]++; header.push(raw + ' (' + (vistos[raw]+1) + ')'); }
+    }
+    const out = [];
+    for(let r=1;r<aoa.length;r++){
+      const rowArr = aoa[r] || [];
+      const obj = {};
+      for(let i=0;i<=maxCol;i++){ obj[header[i]] = rowArr[i] !== undefined ? rowArr[i] : ''; }
+      out.push(obj);
+    }
+    return out;
+  }
+
+  async function readXlsx(file){
+    const buf = await file.arrayBuffer();
+    const entries = readZipEntries(buf);
+    const sheetEntries = entries.filter(e => /^xl\/worksheets\/sheet\d+\.xml$/i.test(e.name))
+      .sort((a,b) => parseInt(a.name.match(/sheet(\d+)\.xml/i)[1],10) - parseInt(b.name.match(/sheet(\d+)\.xml/i)[1],10));
+    const sheetEntry = sheetEntries[0];
+    if(!sheetEntry) throw new Error('No se encontró ninguna hoja dentro del Excel');
+    const sharedEntry = entries.find(e => /^xl\/sharedStrings\.xml$/i.test(e.name));
+    const sheetXml = extractZipEntryText(buf, sheetEntry);
+    const sharedXml = sharedEntry ? extractZipEntryText(buf, sharedEntry) : null;
+    const sharedStrings = parseSharedStrings(sharedXml);
+    return parseSheetRows(sheetXml, sharedStrings);
+  }
+
+  function readText(file){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.onerror = reject;
+      reader.readAsText(file, 'utf-8');
+    });
+  }
+
+  function sliceFromHeader(text, mustContain){
+    const lines = text.split(/\r?\n/);
+    for(let i=0;i<lines.length;i++){
+      if(mustContain.every(k => lines[i].indexOf(k) !== -1)) return lines.slice(i).join('\n');
+    }
+    return text;
+  }
+
+  // --- Parser CSV propio (reemplaza PapaParse), soporta comillas, delimitador variable y saltos de linea embebidos ---
+  function detectDelimiter(text){
+    const firstLine = text.split(/\r?\n/, 1)[0] || '';
+    const semis = (firstLine.match(/;/g) || []).length;
+    const commas = (firstLine.match(/,/g) || []).length;
+    return semis > commas ? ';' : ',';
+  }
+  function parseCsvRows(text, delimiter){
+    delimiter = delimiter || ',';
+    const rows = [];
+    let i=0, field='', row=[], inQuotes=false;
+    const len = text.length;
+    function pushField(){ row.push(field); field=''; }
+    function pushRow(){ pushField(); rows.push(row); row=[]; }
+    while(i<len){
+      const c = text[i];
+      if(inQuotes){
+        if(c === '"'){
+          if(text[i+1] === '"'){ field+='"'; i+=2; continue; }
+          else { inQuotes=false; i++; continue; }
+        } else { field+=c; i++; continue; }
+      } else {
+        if(c === '"'){ inQuotes=true; i++; continue; }
+        if(c === delimiter){ pushField(); i++; continue; }
+        if(c === '\r'){ i++; continue; }
+        if(c === '\n'){ pushRow(); i++; continue; }
+        field+=c; i++; continue;
+      }
+    }
+    if(field.length>0 || row.length>0){ pushRow(); }
+    const nonEmpty = rows.filter(r => !(r.length===1 && r[0]===''));
+    if(!nonEmpty.length) return [];
+    const header = nonEmpty[0];
+    const out = [];
+    for(let r=1;r<nonEmpty.length;r++){
+      const rowArr = nonEmpty[r];
+      const obj = {};
+      for(let c=0;c<header.length;c++){ obj[header[c]] = rowArr[c] !== undefined ? rowArr[c] : ''; }
+      out.push(obj);
+    }
+    return out;
+  }
+
+  // Normaliza filas de Odoo a un esquema único, sin importar si vienen con headers
+  // en español (formato viejo) o con nombres técnicos + External ID (formato nuevo).
+  function findKeyCI(obj, name){
+    const target = name.toLowerCase();
+    for(const k in obj){ if(k.toLowerCase() === target) return obj[k]; }
+    return undefined;
+  }
+  // Varios campos de Odoo (Tipo de Identificación, Provincia) vienen con sufijo " (AR)" cuando
+  // el campo es un many2one con país asociado (ej: "CUIT (AR)", "Río Negro (AR)"). Se limpia acá.
+  function limpiarSufijoAR(texto){
+    return String(texto || '').replace(/\s*\(AR\)\s*$/i, '').trim();
+  }
+  function normalizeOdooRows(rows){
+    if(!rows.length) return rows;
+    const keys = Object.keys(rows[0]);
+    const esFormatoTecnico = keys.includes('ref') && keys.includes('vat');
+    // Nombre de columna del tipo de identificación actual en Odoo: puede venir con nombre tecnico
+    // (l10n_latam_identification_type_id) o en español ("Tipo de identificación"/"Tipo de Identificación",
+    // segun mayusculas del export), y a veces con sufijo " (AR)" (ej: "CUIT (AR)") que se limpia acá.
+    function tipoIdent(r){
+      const raw = findKeyCI(r, 'l10n_latam_identification_type_id') || findKeyCI(r, 'Tipo de identificación') || findKeyCI(r, 'TipoIdentificacion') || '';
+      return limpiarSufijoAR(raw);
+    }
+    if(!esFormatoTecnico){
+      // Formato viejo (headers en español). Si vino de CSV con "Estado", ya se mapeó Activo en readOdooCsv.
+      // Si el Excel traia dos columnas "ID" (Database ID + External ID), el lector las separo como "ID" y "ID (2)".
+      return rows.map(r => {
+        const externalDeDup = r['ID (2)'] !== undefined ? r['ID (2)'] : '';
+        const base = Object.assign({ ExternalID: externalDeDup, TipoIdentificacion: tipoIdent(r) }, r);
+        // Odoo renombró estos 3 campos en una version mas nueva — se completan con el nombre
+        // alternativo si el campo original ("NIF", etc.) no vino en el export.
+        if(base['NIF'] === undefined || base['NIF'] === '') base['NIF'] = findKeyCI(r, 'Identification Number') || findKeyCI(r, 'NIF') || '';
+        if(base['Tipo de Responsabilidad AFIP'] === undefined || base['Tipo de Responsabilidad AFIP'] === '') base['Tipo de Responsabilidad AFIP'] = findKeyCI(r, 'ARCA Responsibility Type') || findKeyCI(r, 'Tipo de Responsabilidad AFIP') || '';
+        if(base['Enlace a página web'] === undefined || base['Enlace a página web'] === '') base['Enlace a página web'] = findKeyCI(r, 'Enlace del sitio web') || findKeyCI(r, 'Enlace a página web') || '';
+        return base;
+      });
+    }
+    return rows.map(r => ({
+      ExternalID: r['.id'] || '',
+      ID: r['id'] || '',
+      Referencia: r['ref'] || '',
+      Nombre: r['name'] || '',
+      NIF: r['vat'] || '',
+      TipoIdentificacion: tipoIdent(r),
+      'Correo electrónico': r['email'] || '',
+      'Tipo de Responsabilidad AFIP': r['l10n_ar_afip_responsibility_type_id'] || '',
+      'Enlace a página web': r['website'] || '',
+      Activo: String(r['active'] || '').trim().toUpperCase() === 'VERDADERO'
+    }));
+  }
+
+  async function readOdooCsv(file){
+    const buf = await file.arrayBuffer();
+    let text = new TextDecoder('utf-8', {fatal:false}).decode(buf);
+    if(text.indexOf('\ufffd') !== -1){
+      text = new TextDecoder('windows-1252').decode(buf);
+    }
+    const delim = detectDelimiter(text);
+    const rows = parseCsvRows(text, delim);
+    rows.forEach(r => {
+      if(r['Estado'] !== undefined && r['Activo'] === undefined){
+        r['Activo'] = String(r['Estado']).trim().toUpperCase() === 'VERDADERO';
+      }
+    });
+    return normalizeOdooRows(rows);
+  }
+
+  document.getElementById('f-odoo').addEventListener('change', async e => {
+    const f = e.target.files[0]; if(!f) return;
+    try{
+      const esCsv = /\.csv$/i.test(f.name);
+      state.odoo = esCsv ? await readOdooCsv(f) : normalizeOdooRows(await readXlsx(f));
+      const tieneExternalId = state.odoo.length && !!state.odoo[0].ExternalID;
+      setStatus('s-odoo', state.odoo.length + ' filas cargadas' + (esCsv ? ' (CSV)' : ' (XLSX)') + (tieneExternalId ? ' · con External ID' : ' · sin External ID'), true);
+    }
+    catch(err){ setStatus('s-odoo', 'Error al leer archivo: ' + err.message, false); }
+    checkReady();
+  });
+
+  document.getElementById('f-dashzip').addEventListener('change', async e => {
+    const f = e.target.files[0]; if(!f) return;
+    try{
+      const buf = await f.arrayBuffer();
+      const entries = readZipEntries(buf);
+      const accEntry = entries.find(en => /accounts.*\.csv$/i.test(en.name));
+      const billEntry = entries.find(en => /billing.*\.csv$/i.test(en.name));
+      if(!accEntry || !billEntry){
+        const nombres = entries.map(en => en.name).join(', ');
+        setStatus('s-dashzip', 'No se encontró accounts_*.csv / billing_*.csv. Archivos en el zip: ' + nombres, false);
+        return;
+      }
+      const accRaw = extractZipEntryText(buf, accEntry);
+      const billRaw = extractZipEntryText(buf, billEntry);
+      const accSliced = sliceFromHeader(accRaw, ['ID','Nombre','País','Estado comercial']);
+      state.accounts = parseCsvRows(accSliced);
+      state.billing = parseCsvRows(billRaw);
+      setStatus('s-dashzip', 'Accounts: ' + state.accounts.length + ' filas · Billing: ' + state.billing.length + ' filas', true);
+    } catch(err){ setStatus('s-dashzip', 'Error al leer el zip: ' + err.message, false); }
+    checkReady();
+  });
+
+  document.getElementById('f-metabase').addEventListener('change', async e => {
+    const f = e.target.files[0]; if(!f) return;
+    try{ state.metabase = await readXlsx(f); setStatus('s-metabase', state.metabase.length + ' filas cargadas', true); }
+    catch(err){ setStatus('s-metabase', 'Error al leer archivo', false); }
+    checkReady();
+  });
+
+  document.getElementById('f-admin').addEventListener('change', async e => {
+    const f = e.target.files[0]; if(!f) return;
+    try{
+      const raw = await readText(f);
+      const sliced = sliceFromHeader(raw, ['ID Cuenta','Usuario','Email']);
+      state.admin = parseCsvRows(sliced);
+      setStatus('s-admin', state.admin.length + ' filas cargadas', true);
+    } catch(err){ setStatus('s-admin', 'Error al leer archivo', false); }
+    checkReady();
+  });
+
+  // --- Etapa 2 · Dash: estado y carga de archivos ---
+  const state2 = { odoo:null, billing:null, accounts:null };
+  function checkReady2(){
+    document.getElementById('btn-process-2').disabled = !(state2.odoo && state2.billing && state2.accounts);
+  }
+
+  document.getElementById('f2-odoo').addEventListener('change', async e => {
+    const f = e.target.files[0]; if(!f) return;
+    try{
+      const esCsv = /\.csv$/i.test(f.name);
+      state2.odoo = esCsv ? await readOdooCsv(f) : normalizeOdooRows(await readXlsx(f));
+      setStatus('s2-odoo', state2.odoo.length + ' filas cargadas' + (esCsv ? ' (CSV)' : ' (XLSX)'), true);
+    } catch(err){ setStatus('s2-odoo', 'Error al leer archivo: ' + err.message, false); }
+    checkReady2();
+  });
+
+  document.getElementById('f2-dashzip').addEventListener('change', async e => {
+    const f = e.target.files[0]; if(!f) return;
+    try{
+      const buf = await f.arrayBuffer();
+      const entries = readZipEntries(buf);
+      const billEntry = entries.find(en => /billing.*\.csv$/i.test(en.name));
+      const accEntry = entries.find(en => /accounts.*\.csv$/i.test(en.name));
+      if(!billEntry || !accEntry){
+        const nombres = entries.map(en => en.name).join(', ');
+        setStatus('s2-dashzip', 'Necesito accounts_*.csv y billing_*.csv en el zip. Archivos encontrados: ' + nombres, false);
+        return;
+      }
+      state2.billing = parseCsvRows(extractZipEntryText(buf, billEntry));
+      state2.accounts = parseCsvRows(sliceFromHeader(extractZipEntryText(buf, accEntry), ['ID','Nombre','País','Estado comercial']));
+      setStatus('s2-dashzip', 'Accounts: ' + state2.accounts.length + ' filas · Billing: ' + state2.billing.length + ' filas', true);
+    } catch(err){ setStatus('s2-dashzip', 'Error al leer el zip: ' + err.message, false); }
+    checkReady2();
+  });
+
+  // --- Generador XLSX propio (sin librerías externas): zip "stored" + OOXML mínimo ---
+  function crc32(bytes){
+    if(!crc32.table){
+      const t = new Uint32Array(256);
+      for(let n=0;n<256;n++){
+        let c = n;
+        for(let k=0;k<8;k++){ c = (c&1) ? (0xEDB88320 ^ (c>>>1)) : (c>>>1); }
+        t[n] = c>>>0;
+      }
+      crc32.table = t;
+    }
+    let crc = 0xFFFFFFFF;
+    for(let i=0;i<bytes.length;i++){ crc = crc32.table[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8); }
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+  }
+
+  function buildZipStored(files){
+    const localParts = [], centralParts = [];
+    let offset = 0;
+    const now = new Date();
+    const dosTime = ((now.getHours()<<11)|(now.getMinutes()<<5)|((now.getSeconds()/2)|0)) & 0xFFFF;
+    const dosDate = (((now.getFullYear()-1980)<<9)|((now.getMonth()+1)<<5)|now.getDate()) & 0xFFFF;
+    files.forEach(file => {
+      const nameBytes = new TextEncoder().encode(file.name);
+      const data = file.data;
+      const crc = crc32(data);
+      const localHeader = new Uint8Array(30 + nameBytes.length);
+      const dv = new DataView(localHeader.buffer);
+      dv.setUint32(0, 0x04034b50, true); dv.setUint16(4, 20, true); dv.setUint16(6, 0, true); dv.setUint16(8, 0, true);
+      dv.setUint16(10, dosTime, true); dv.setUint16(12, dosDate, true); dv.setUint32(14, crc, true);
+      dv.setUint32(18, data.length, true); dv.setUint32(22, data.length, true);
+      dv.setUint16(26, nameBytes.length, true); dv.setUint16(28, 0, true);
+      localHeader.set(nameBytes, 30);
+      localParts.push(localHeader, data);
+
+      const centralHeader = new Uint8Array(46 + nameBytes.length);
+      const cdv = new DataView(centralHeader.buffer);
+      cdv.setUint32(0, 0x02014b50, true); cdv.setUint16(4, 20, true); cdv.setUint16(6, 20, true); cdv.setUint16(8, 0, true); cdv.setUint16(10, 0, true);
+      cdv.setUint16(12, dosTime, true); cdv.setUint16(14, dosDate, true); cdv.setUint32(16, crc, true);
+      cdv.setUint32(20, data.length, true); cdv.setUint32(24, data.length, true);
+      cdv.setUint16(28, nameBytes.length, true); cdv.setUint16(30, 0, true); cdv.setUint16(32, 0, true);
+      cdv.setUint16(34, 0, true); cdv.setUint16(36, 0, true); cdv.setUint32(38, 0, true);
+      cdv.setUint32(42, offset, true);
+      centralHeader.set(nameBytes, 46);
+      centralParts.push(centralHeader);
+      offset += localHeader.length + data.length;
+    });
+    const centralStart = offset;
+    let centralSize = 0; centralParts.forEach(p => centralSize += p.length);
+    const eocd = new Uint8Array(22);
+    const edv = new DataView(eocd.buffer);
+    edv.setUint32(0, 0x06054b50, true); edv.setUint16(8, files.length, true); edv.setUint16(10, files.length, true);
+    edv.setUint32(12, centralSize, true); edv.setUint32(16, centralStart, true);
+    const out = new Uint8Array(offset + centralSize + 22);
+    let pos = 0;
+    localParts.forEach(p => { out.set(p, pos); pos += p.length; });
+    centralParts.forEach(p => { out.set(p, pos); pos += p.length; });
+    out.set(eocd, pos);
+    return out;
+  }
+
+  function colLetter(n){
+    let s = ''; n = n + 1;
+    while(n > 0){ const rem = (n - 1) % 26; s = String.fromCharCode(65 + rem) + s; n = Math.floor((n - 1) / 26); }
+    return s;
+  }
+  function xmlEsc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function buildXlsxBytes(rows, sheetName){
+    sheetName = (sheetName || 'Hoja1').replace(/[\\/?*\[\]:]/g,'').slice(0, 31) || 'Hoja1';
+    const cols = rows.length ? Object.keys(rows[0]) : ['Sin datos'];
+    let sheetRows = '<row r="1">' + cols.map((c,i) => '<c r="' + colLetter(i) + '1" t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(c) + '</t></is></c>').join('') + '</row>';
+    rows.forEach((r, ri) => {
+      const rn = ri + 2;
+      sheetRows += '<row r="' + rn + '">' + cols.map((c, ci) => {
+        const val = r[c] == null ? '' : String(r[c]);
+        return '<c r="' + colLetter(ci) + rn + '" t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(val) + '</t></is></c>';
+      }).join('') + '</row>';
+    });
+    const sheetXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>' + sheetRows + '</sheetData></worksheet>';
+    const contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>';
+    const rootRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+    const workbookXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="' + xmlEsc(sheetName) + '" sheetId="1" r:id="rId1"/></sheets></workbook>';
+    const workbookRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
+    const stylesXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts><fills count="1"><fill><patternFill patternType="none"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs></styleSheet>';
+    const enc = new TextEncoder();
+    const files = [
+      { name: '[Content_Types].xml', data: enc.encode(contentTypes) },
+      { name: '_rels/.rels', data: enc.encode(rootRels) },
+      { name: 'xl/workbook.xml', data: enc.encode(workbookXml) },
+      { name: 'xl/_rels/workbook.xml.rels', data: enc.encode(workbookRels) },
+      { name: 'xl/styles.xml', data: enc.encode(stylesXml) },
+      { name: 'xl/worksheets/sheet1.xml', data: enc.encode(sheetXml) }
+    ];
+    return buildZipStored(files);
+  }
+
+  function safeFileName(title){
+    return title.replace(/—/g,'-').replace(/[\/\\?%*:|"<>]/g,'').trim();
+  }
+
+  function toCsv(rows){
+    if(!rows || !rows.length) return '';
+    const cols = Object.keys(rows[0]);
+    const esc = v => { v = (v==null? '' : String(v)); return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v; };
+    const lines = [cols.join(',')];
+    rows.forEach(r => lines.push(cols.map(c => esc(r[c])).join(',')));
+    return lines.join('\n');
+  }
+
+  function fillTextarea(bucketName){
+    const ta = document.getElementById(bucketName + '_text');
+    if(ta && !ta.value){
+      const rows = window.__vcBuckets[bucketName];
+      ta.value = toCsv(rows);
+    }
+    return ta;
+  }
+
+  // Descarga como XLSX real (generado sin librerías externas). El nombre del archivo sale del título de la sección.
+  window.vcDownload = function(bucketName){
+    try{
+      const rows = window.__vcBuckets[bucketName];
+      const title = (window.__vcTitles && window.__vcTitles[bucketName]) || bucketName;
+      const fname = safeFileName(title) + '.xlsx';
+      const bytes = buildXlsxBytes(rows, title.replace(/^Output \d+\s*[-—]\s*/,''));
+      const blob = new Blob([bytes], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = fname; a.click();
+      URL.revokeObjectURL(url);
+    } catch(e){ /* si falla, el usuario tiene el botón "Copiar" y el texto seleccionable como respaldo */ }
+  };
+
+  // Copia al portapapeles como texto CSV (respaldo si la descarga del xlsx no funciona en el entorno).
+  window.vcCopy = function(bucketName, btn){
+    const ta = fillTextarea(bucketName);
+    const done = (ok) => { if(btn){ const orig = btn.textContent; btn.textContent = ok ? '¡Copiado!' : 'No se pudo copiar'; setTimeout(()=>{ btn.textContent = orig; }, 1800); } };
+    const csv = ta ? ta.value : toCsv(window.__vcBuckets[bucketName]);
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(csv).then(()=>done(true)).catch(()=>{
+        if(fallbackCopy(ta)) done(true); else done(false);
+      });
+    } else {
+      done(fallbackCopy(ta));
+    }
+  };
+
+  function fallbackCopy(ta){
+    try{
+      if(!ta) return false;
+      ta.style.position = 'static';
+      ta.focus(); ta.select();
+      const ok = document.execCommand('copy');
+      return ok;
+    } catch(e){ return false; }
+  }
+
+  window.vcToggle = function(id){
+    const el = document.getElementById(id);
+    el.classList.toggle('open');
+    if(el.classList.contains('open') && window.__vcBuckets && window.__vcBuckets[id]){
+      fillTextarea(id);
+    }
+  };
+
+  function renderTable(rows, limit){
+    if(!rows.length) return '<p style="font-size:12px;color:#9ca3af;">Sin registros.</p>';
+    const cols = Object.keys(rows[0]);
+    const shown = rows.slice(0, limit || 15);
+    let html = '<div class="vc-table-wrap"><table class="vc-t"><thead><tr>' + cols.map(c=>'<th>'+c+'</th>').join('') + '</tr></thead><tbody>';
+    shown.forEach(r => { html += '<tr>' + cols.map(c => '<td>' + (r[c]==null?'':String(r[c])) + '</td>').join('') + '</tr>'; });
+    html += '</tbody></table></div>';
+    if(rows.length > shown.length) html += '<p style="font-size:11px;color:#9ca3af;margin-top:6px;">Mostrando ' + shown.length + ' de ' + rows.length + '.</p>';
+    return html;
+  }
+
+  // Descarga como CSV real (Dash pide el archivo separado por comas, no xlsx).
+  window.vcDownloadCsv = function(bucketName){
+    try{
+      const rows = window.__vcBuckets[bucketName];
+      const title = (window.__vcTitles && window.__vcTitles[bucketName]) || bucketName;
+      const fname = safeFileName(title) + '.csv';
+      const csv = toCsv(rows);
+      const blob = new Blob(["\ufeff" + csv], {type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = fname; a.click();
+      URL.revokeObjectURL(url);
+    } catch(e){ /* si falla, el usuario tiene el botón "Copiar" y el texto seleccionable como respaldo */ }
+  };
+
+  function sectionCsv(id, title, rows, note, pillType, pillLabel){
+    window.__vcTitles = window.__vcTitles || {};
+    window.__vcTitles[id] = title;
+    const pill = pillType ? '<span class="vc-pill ' + pillType + '">' + pillLabel + '</span>' : '';
+    const disabled = rows.length ? '' : 'disabled';
+    return '<div class="vc-section"><div class="vc-section-head" onclick="vcToggle(\'' + id + '\')"><h3>' + title + pill + '</h3>' +
+      '<span>' +
+        '<button class="vc-btn ghost" onclick="event.stopPropagation(); vcDownloadCsv(\'' + id + '\')" ' + disabled + '>Descargar .csv</button> ' +
+        '<button class="vc-btn ghost" onclick="event.stopPropagation(); vcCopy(\'' + id + '\', this)" ' + disabled + '>Copiar CSV</button>' +
+      '</span></div>' +
+      '<div class="vc-section-body" id="' + id + '">' +
+        (note ? '<p class="vc-note">' + note + '</p>' : '') +
+        renderTable(rows) +
+        '<textarea id="' + id + '_text" readonly onclick="this.select()" placeholder="Si &quot;Descargar&quot; o &quot;Copiar&quot; no funcionan en tu entorno, hacé click acá, Ctrl+A y Ctrl+C para copiar el CSV manualmente." style="width:100%;min-height:110px;margin-top:10px;font-family:monospace;font-size:11px;padding:8px;border:1px solid var(--border);border-radius:8px;color:var(--texto);background:#fafafd;"></textarea>' +
+      '</div></div>';
+  }
+
+  function section(id, title, rows, note, pillType, pillLabel){
+    window.__vcTitles = window.__vcTitles || {};
+    window.__vcTitles[id] = title;
+    const pill = pillType ? '<span class="vc-pill ' + pillType + '">' + pillLabel + '</span>' : '';
+    const disabled = rows.length ? '' : 'disabled';
+    return '<div class="vc-section"><div class="vc-section-head" onclick="vcToggle(\'' + id + '\')"><h3>' + title + pill + '</h3>' +
+      '<span>' +
+        '<button class="vc-btn ghost" onclick="event.stopPropagation(); vcDownload(\'' + id + '\')" ' + disabled + '>Descargar .xlsx</button> ' +
+        '<button class="vc-btn ghost" onclick="event.stopPropagation(); vcCopy(\'' + id + '\', this)" ' + disabled + '>Copiar CSV</button>' +
+      '</span></div>' +
+      '<div class="vc-section-body" id="' + id + '">' +
+        (note ? '<p class="vc-note">' + note + '</p>' : '') +
+        renderTable(rows) +
+        '<textarea id="' + id + '_text" readonly onclick="this.select()" placeholder="Si &quot;Descargar&quot; o &quot;Copiar&quot; no funcionan en tu entorno, hacé click acá, Ctrl+A y Ctrl+C para copiar el CSV manualmente." style="width:100%;min-height:110px;margin-top:10px;font-family:monospace;font-size:11px;padding:8px;border:1px solid var(--border);border-radius:8px;color:var(--texto);background:#fafafd;"></textarea>' +
+      '</div></div>';
+  }
+
+  document.getElementById('btn-process').addEventListener('click', function(){
+    const log = document.getElementById('proc-log');
+    log.textContent = 'Procesando...';
+
+    const odooByRef = new Map();
+    state.odoo.forEach(r => {
+      const refRaw = String(r['Referencia'] || '').trim();
+      if(/_old$/i.test(refRaw)) return; // contacto ya dado de baja en una corrida anterior (Regla 3a) — no participa en el matcheo activo
+      const ref = normId(refRaw);
+      if(!ref) return;
+      if(!odooByRef.has(ref)) odooByRef.set(ref, []);
+      odooByRef.get(ref).push(r);
+    });
+
+    const billingByAcc = new Map();
+    state.billing.forEach(r => {
+      if((r['País']||'').trim() !== 'Argentina') return;
+      const id = normId(r['ID']);
+      if(id) billingByAcc.set(id, r);
+    });
+
+    const accountsAR = new Map();
+    state.accounts.forEach(r => {
+      if((r['País']||'').trim() !== 'Argentina') return;
+      const id = normId(r['ID']);
+      if(id) accountsAR.set(id, r);
+    });
+
+    const metaByAcc = new Map();
+    state.metabase.forEach(r => {
+      const st = String(r['afip_settings_state']||'').trim();
+      if(st === 'approved'){
+        const id = normId(r['account_id']);
+        if(id) metaByAcc.set(id, r);
+      }
+    });
+
+    const adminGroups = new Map();
+    state.admin.forEach(r => {
+      const id = normId(r['ID Cuenta']);
+      if(!id) return;
+      if(!adminGroups.has(id)) adminGroups.set(id, []);
+      adminGroups.get(id).push(r);
+    });
+    const adminBest = new Map();
+    adminGroups.forEach((list, id) => {
+      list.sort((a,b) => {
+        // Prioridad 1: que el mail tenga formato válido (ahí se mandan las facturas, no sirve
+        // un "mail" que en realidad es el usuario de login interno de Dash, tipo "dev@milanpunto").
+        const va = esMailValido(a['Email']) ? 1 : 0;
+        const vb = esMailValido(b['Email']) ? 1 : 0;
+        if(vb !== va) return vb - va;
+        // Prioridad 2: mas logins. Prioridad 3: login mas reciente.
+        const la = parseInt(a['Logins']||'0',10), lb = parseInt(b['Logins']||'0',10);
+        if(lb !== la) return lb - la;
+        const da = new Date(a['Último login (UTC)']||0).getTime();
+        const db = new Date(b['Último login (UTC)']||0).getTime();
+        return db - da;
+      });
+      adminBest.set(id, list[0]);
+    });
+
+    // Resolver de mail para la Regla 2c (mantenimiento) — distinto del resto de la herramienta:
+    // acá lo que importa no es "quien tiene mas logins hoy" sino "el mail actual de Odoo sigue
+    // siendo un admin vigente (con actividad reciente) de la cuenta".
+    const HOY = new Date();
+    const LIMITE_3_MESES = new Date(HOY); LIMITE_3_MESES.setMonth(LIMITE_3_MESES.getMonth() - 3);
+    const LIMITE_3_MESES_MS = LIMITE_3_MESES.getTime();
+    function loginTimeMs(admin){
+      const t = new Date(admin['Último login (UTC)'] || 0).getTime();
+      return isNaN(t) ? 0 : t;
+    }
+    function resolverMailMantenimiento(id, mailOdooActual){
+      const lista = adminGroups.get(id) || []; // ya viene ordenada por (mail válido primero, luego Logins desc)
+      const mailOdooNorm = normEmail(mailOdooActual);
+      const actual = lista.find(a => normEmail(a['Email']) === mailOdooNorm);
+
+      // El mail actual sigue "vigente" solo si además de tener actividad reciente, tiene formato
+      // válido — ahí es donde se mandan las facturas, no sirve un mail que no se pueda usar.
+      if(actual && esMailValido(actual['Email']) && loginTimeMs(actual) >= LIMITE_3_MESES_MS){
+        return { cambia:false, nuevo: mailOdooActual };
+      }
+
+      // Para elegir el reemplazo, la validez del mail pesa mas que la recencia del login:
+      // 1) válido y con login reciente (<3 meses) — el ideal.
+      // 2) válido aunque el login no sea tan reciente — mejor un mail "dormido" que uno que no sirve.
+      // 3) sin mail válido disponible, pero con login reciente — el comportamiento de respaldo de siempre.
+      // 4) caso raro: nadie válido ni reciente -> el de mas logins entre todos.
+      const validoYReciente = lista.filter(a => esMailValido(a['Email']) && loginTimeMs(a) >= LIMITE_3_MESES_MS);
+      const validoNadaMas = lista.filter(a => esMailValido(a['Email']) && loginTimeMs(a) < LIMITE_3_MESES_MS);
+      const recienteNadaMas = lista.filter(a => !esMailValido(a['Email']) && loginTimeMs(a) >= LIMITE_3_MESES_MS);
+      const candidato = validoYReciente[0] || validoNadaMas[0] || recienteNadaMas[0] || (lista.length ? lista[0] : null);
+      return { cambia:true, nuevo: candidato ? candidato['Email'] : '' };
+    }
+
+    function mapSituacion(raw){
+      if(!raw) return '';
+      const s = String(raw).trim().toLowerCase();
+      const map = {
+        'responsable inscripto': 'IVA Responsable Inscripto',
+        'responsable_inscripto': 'IVA Responsable Inscripto',
+        'monotributo': 'Responsable Monotributo',
+        'monotributista': 'Responsable Monotributo',
+        'consumidor final': 'Consumidor Final',
+        'exento': 'IVA Sujeto Exento'
+      };
+      return map[s] || raw;
+    }
+
+    // Arma el comentario de revisión (no importar) según el estado del mail. Nunca pisa datos, solo anota.
+    function construirComentario(mail, huboIntentoAdmin){
+      const problemas = [];
+      const limpio = (mail || '').trim();
+      if(!limpio){
+        problemas.push(huboIntentoAdmin ? 'No tiene ningún mail admin' : 'mail vacío');
+        return problemas.join('; ');
+      }
+      if(mail !== limpio) problemas.push('mail con espacios extra');
+      if(/[áéíóúÁÉÍÓÚüÜñÑ]/.test(limpio)) problemas.push('mail con tildes');
+      if(/\s/.test(limpio)) problemas.push('mail con espacios internos');
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(limpio)) problemas.push('formato de mail inválido');
+      return problemas.join('; ');
+    }
+
+    // Un mail "válido" es el que no dispara ningún problema de construirComentario — se reutiliza
+    // la misma validación para elegir qué admin usar, así queda 100% consistente en toda la herramienta.
+    function esMailValido(mail){
+      return !!mail && construirComentario(mail, false) === '';
+    }
+
+    // Fila de alta para Output 3: mismos campos siempre, cambia el origen del dato segun el caso.
+    function buildAltaRow(opts){
+      return {
+        Nombre: opts.nombre || '',
+        'Tipo de compañía': 'Compañía',
+        'Nombre de la calle': opts.domicilio || '',
+        Idioma: 'Spanish / Español',
+        Ciudad: opts.ciudad || '',
+        País: 'Argentina',
+        'Tipo de identificación': opts.tipoIdent || '',
+        NIF: opts.nif || '',
+        'Tipo de Responsabilidad AFIP': 'Consumidor Final',
+        'Correo electrónico': opts.mail || '',
+        Referencia: opts.referencia,
+        Compañía: 'COMANDARINA S.R.L.',
+        'Enlace a página web': opts.enlace,
+        'Grupo (no importar)': opts.grupo,
+        'Comentario (no importar)': construirComentario(opts.mail, !!opts.huboIntentoAdmin)
+      };
+    }
+
+    const r1_ok=[], r1b_reactivar=[], r2_mail=[], r2b_nombre=[], r2c_mailadmin=[], r3a_baja=[], r3a_alta_pend=[], r3b_update=[], r4a_update=[], r4b_alta=[], r5_alta=[], r6_alta_cf=[], excepciones=[], cuentasInternas=[];
+    const output1=[]; let output2=[], output3=[];
+    const OUT2_COLS = ['External ID','Referencia','Nombre','NIF','Tipo de identificación','Correo electrónico','Tipo de Responsabilidad AFIP','Enlace a página web','Activo','Grupo (no importar)'];
+    const OUT3_COLS = ['Nombre','Tipo de compañía','Nombre de la calle','Idioma','Ciudad','País','Tipo de identificación','NIF','Tipo de Responsabilidad AFIP','Correo electrónico','Referencia','Compañía','Enlace a página web','Grupo (no importar)'];
+    const DOMINIOS_INTERNOS = /@(fu\.do|deli\.com\.br)$/i;
+    // Referencias (ID de Dash) que NUNCA se marcan como cuenta interna, aunque cumplan el criterio de
+    // dominio + Estado comercial Activo — son casos revisados a mano y confirmados como cuentas reales.
+    const EXCEPCIONES_CUENTA_INTERNA = new Set(['154948']); // tienda_cholita — confirmada como cuenta activa real
+
+    accountsAR.forEach((accRow, id) => {
+      const billing = billingByAcc.get(id);
+      const odooList = odooByRef.get(id);
+      const enlaceDash = 'https://dash.fu.do/accounts/' + id;
+      const billingRow = billing || {};
+      const admin = adminBest.get(id);
+      const mailAdmin = admin ? admin['Email'] : '';
+
+      // Cuenta interna (equipo Fudo/Deli usando su propia cuenta comercial activa) — se excluye
+      // por completo del análisis, no se crea ni se actualiza en ningún lado.
+      const esComercialActiva = String(accRow['Estado comercial']||'').trim().toLowerCase() === 'activo';
+      if(esComercialActiva && DOMINIOS_INTERNOS.test(String(mailAdmin||'').trim()) && !EXCEPCIONES_CUENTA_INTERNA.has(id)){
+        cuentasInternas.push({ referencia:id, nombre:accRow['Nombre'], mail_admin:mailAdmin, link:enlaceDash });
+        return;
+      }
+
+      const log1 = (regla, accion, detalle) => output1.push({
+        Referencia:id, Nombre:accRow['Nombre'],
+        CUIT_Billing: billingRow['Código'] || '', RazonSocial_Billing: billingRow['Razón social'] || '',
+        Situacion_Billing: billingRow['Situación ante el impuesto'] || '', Email_Billing: billingRow['Email'] || '',
+        Regla: regla, Accion: accion, Detalle: detalle || ''
+      });
+
+      if(odooList && odooList.length > 1){
+        excepciones.push({referencia:id, motivo:'Referencia duplicada en Odoo ('+odooList.length+' contactos)', ids_odoo: odooList.map(o=>o['ID']).join(' / ')});
+        log1('Excepción', 'Revisión manual', 'Referencia duplicada en Odoo');
+        return;
+      }
+      const odoo = (odooList && odooList.length === 1) ? odooList[0] : null;
+      const cuitDash = billing ? normDigits(billing['Código']) : '';
+      const billingTieneCodigo = !!cuitDash;
+
+      if(billingTieneCodigo){
+        // --- Billing manda ---
+        if(!odoo){
+          const tipoIdent = billing['Tipo de identificación'] || 'CUIT';
+          const esDni = String(tipoIdent).trim().toUpperCase() === 'DNI';
+          const mailUsado = billing['Email'] || mailAdmin;
+          const row = buildAltaRow({
+            nombre: billing['Razón social'], tipoIdent, nif: billing['Código'],
+            domicilio: esDni ? billing['Domicilio'] : '', ciudad: esDni ? billing['Ciudad'] : '',
+            mail: mailUsado, huboIntentoAdmin: !billing['Email'], referencia: id, enlace: enlaceDash,
+            grupo: esDni ? 'DNI' : 'CUIT'
+          });
+          r5_alta.push(row); output3.push(row);
+          log1('5', 'Crear contacto', 'Alta directa con datos de Billing (' + (esDni ? 'DNI' : 'CUIT') + ')');
+          return;
+        }
+        const nifOdoo = normDigits(odoo['NIF']);
+        const mailOdoo = normEmail(odoo['Correo electrónico']);
+        const mailDash = normEmail(billing['Email']);
+        if(nifOdoo === cuitDash){
+          const estabaArchivado = odoo['Activo'] === false;
+          if(mailOdoo === mailDash){
+            if(estabaArchivado){
+              const row = {'External ID':odoo['ExternalID']||'', Referencia:id, Nombre:odoo['Nombre'], NIF:odoo['NIF'], 'Tipo de identificación':odoo['TipoIdentificacion']||'', 'Correo electrónico':odoo['Correo electrónico'], 'Tipo de Responsabilidad AFIP':odoo['Tipo de Responsabilidad AFIP'], 'Enlace a página web':odoo['Enlace a página web']||enlaceDash, Activo:'TRUE', 'Grupo (no importar)':'Reactivar', 'Comentario (no importar)':construirComentario(odoo['Correo electrónico'], false)};
+              r1b_reactivar.push(row); output2.push(row);
+              log1('1b', 'Reactivar contacto', 'Datos coinciden con Billing pero el contacto está archivado en Odoo — desarchivar');
+            } else {
+              r1_ok.push({referencia:id, id_odoo:odoo['ID'], razon_social:odoo['Nombre']});
+              log1('1', 'Sin acción', 'Validado OK');
+            }
+          } else {
+            const row = {'External ID':odoo['ExternalID']||'', Referencia:id, Nombre:odoo['Nombre'], NIF:odoo['NIF'], 'Tipo de identificación':odoo['TipoIdentificacion']||'', 'Correo electrónico':billing['Email'], 'Tipo de Responsabilidad AFIP':odoo['Tipo de Responsabilidad AFIP'], 'Enlace a página web':odoo['Enlace a página web']||enlaceDash, Activo:'TRUE', 'Grupo (no importar)':'Actualizar mail', 'Comentario (no importar)':construirComentario(billing['Email'], false)};
+            r2_mail.push(row); output2.push(row);
+            log1('2', 'Actualizar mail', 'Mail actualizado en Odoo' + (estabaArchivado ? ' (además estaba archivado, se reactiva)' : ''));
+          }
+        } else if(nifOdoo){
+          const enlaceOrig = odoo['Enlace a página web'] || enlaceDash;
+          const bajaRow = {'External ID':odoo['ExternalID']||'', Referencia:id+'_old', Nombre:odoo['Nombre'], NIF:odoo['NIF'], 'Tipo de identificación':odoo['TipoIdentificacion']||'', 'Correo electrónico':odoo['Correo electrónico'], 'Tipo de Responsabilidad AFIP':odoo['Tipo de Responsabilidad AFIP'], 'Enlace a página web':enlaceOrig+'_old', Activo:'FALSE', 'Grupo (no importar)':'Baja', 'Comentario (no importar)':''};
+          const tipoIdentAlta = billing['Tipo de identificación'] || 'CUIT';
+          const esDniAlta = String(tipoIdentAlta).trim().toUpperCase() === 'DNI';
+          const mailUsadoAlta = billing['Email'] || mailAdmin;
+          const altaRow = buildAltaRow({
+            nombre: billing['Razón social'], tipoIdent: tipoIdentAlta, nif: billing['Código'],
+            domicilio: esDniAlta ? billing['Domicilio'] : '', ciudad: esDniAlta ? billing['Ciudad'] : '',
+            mail: mailUsadoAlta, huboIntentoAdmin: !billing['Email'], referencia: id, enlace: enlaceDash, grupo: '3a - alta'
+          });
+          r3a_baja.push(bajaRow); output2.push(bajaRow);
+          r3a_alta_pend.push(altaRow); output3.push(altaRow);
+          log1('3a', 'Baja + Alta', 'NIF distinto de otra razón social');
+        } else {
+          const estabaArchivado = odoo['Activo'] === false;
+          const row = {'External ID':odoo['ExternalID']||'', Referencia:id, Nombre:billing['Razón social'], NIF:billing['Código'], 'Tipo de identificación':billing['Tipo de identificación']||'CUIT', 'Correo electrónico':billing['Email'], 'Tipo de Responsabilidad AFIP':mapSituacion(billing['Situación ante el impuesto']), 'Enlace a página web':odoo['Enlace a página web']||enlaceDash, Activo:'TRUE', 'Grupo (no importar)':'Actualizar — NIF vacío', 'Comentario (no importar)':construirComentario(billing['Email'], false)};
+          r3b_update.push(row); output2.push(row);
+          log1('3b', 'Actualizar contacto', 'NIF de Odoo estaba vacío, se completa con Billing' + (estabaArchivado ? ' (además estaba archivado, se reactiva)' : ''));
+        }
+      } else {
+        // --- Billing sin datos: Metabase como respaldo ---
+        const meta = metaByAcc.get(id);
+        if(meta){
+          if(odoo){
+            const estabaArchivado = odoo['Activo'] === false;
+            const cuitMeta = normDigits(meta['afip_settings_cuit']);
+            const nifOdoo = normDigits(odoo['NIF']);
+            const mailOdoo = normEmail(odoo['Correo electrónico']);
+            const mailAdminNorm = normEmail(mailAdmin);
+            const nifCoincide = !!(nifOdoo && cuitMeta && nifOdoo === cuitMeta);
+            const mailCoincide = mailOdoo === mailAdminNorm;
+
+            if(nifCoincide && mailCoincide){
+              if(estabaArchivado){
+                const row = {'External ID':odoo['ExternalID']||'', Referencia:id, Nombre:odoo['Nombre'], NIF:odoo['NIF'], 'Tipo de identificación':odoo['TipoIdentificacion']||'', 'Correo electrónico':odoo['Correo electrónico'], 'Tipo de Responsabilidad AFIP':odoo['Tipo de Responsabilidad AFIP'], 'Enlace a página web':odoo['Enlace a página web']||enlaceDash, Activo:'TRUE', 'Grupo (no importar)':'Reactivar', 'Comentario (no importar)':construirComentario(odoo['Correo electrónico'], false)};
+                r1b_reactivar.push(row); output2.push(row);
+                log1('1b', 'Reactivar contacto', 'CUIT y mail ya coinciden con Metabase, pero el contacto está archivado — desarchivar');
+              } else {
+                r1_ok.push({referencia:id, id_odoo:odoo['ID'], razon_social:odoo['Nombre']});
+                log1('1', 'Sin acción', 'Validado OK vía Metabase (sin billing): CUIT y mail ya coinciden');
+              }
+            } else {
+              // Solo se toca lo que no coincide (NIF y/o mail). Nombre y Responsabilidad AFIP quedan
+              // igual que ya estaban en Odoo — eso lo actualiza Odoo solo, vía ARCA, una vez que el NIF es correcto.
+              const row = {'External ID':odoo['ExternalID']||'', Referencia:id, Nombre:odoo['Nombre'], NIF: cuitMeta || odoo['NIF'], 'Tipo de identificación': cuitMeta ? 'CUIT' : (odoo['TipoIdentificacion']||''), 'Correo electrónico': mailAdmin || odoo['Correo electrónico'], 'Tipo de Responsabilidad AFIP':odoo['Tipo de Responsabilidad AFIP'], 'Enlace a página web':odoo['Enlace a página web']||enlaceDash, Activo:'TRUE', 'Grupo (no importar)':'Actualizar vía Metabase', 'Comentario (no importar)':construirComentario(mailAdmin || odoo['Correo electrónico'], !mailCoincide)};
+              const cambios = [];
+              if(!nifCoincide) cambios.push('CUIT');
+              if(!mailCoincide) cambios.push('mail');
+              r4a_update.push(row); output2.push(row);
+              log1('4a', 'Actualizar contacto (Metabase)', 'Sin billing, se corrige: ' + cambios.join(' y ') + (estabaArchivado ? ' (además estaba archivado, se reactiva)' : ''));
+            }
+          } else {
+            const row = buildAltaRow({
+              nombre: meta['afip_settings_social_name'], tipoIdent: 'CUIT', nif: meta['afip_settings_cuit'],
+              mail: mailAdmin, huboIntentoAdmin: true, referencia: id, enlace: enlaceDash, grupo: '4b (Metabase)'
+            });
+            r4b_alta.push(row); output3.push(row);
+            log1('4b', 'Crear contacto (Metabase)', 'Sin billing, alta con Metabase');
+          }
+        } else if(odoo){
+          // Sin billing ni Metabase: no hay fuente fiscal para actualizar, pero dos cosas sí se
+          // pueden haber desactualizado con el tiempo y hay que revisar en cada corrida:
+          // 1) el Nombre de la cuenta en Dash, y 2) el mail admin (si la persona dejó de ser admin).
+          const nombreDash = String(accRow['Nombre'] || '').trim();
+          const nombreOdoo = String(odoo['Nombre'] || '').trim();
+          const nombreCambio = !!(nombreDash && nombreDash !== nombreOdoo);
+          const resolucionMail = resolverMailMantenimiento(id, odoo['Correo electrónico']);
+          const mailCambio = resolucionMail.cambia && normEmail(resolucionMail.nuevo) !== normEmail(odoo['Correo electrónico']);
+
+          if(nombreCambio || mailCambio){
+            const nombreFinal = nombreCambio ? nombreDash : odoo['Nombre'];
+            const mailFinal = mailCambio ? resolucionMail.nuevo : odoo['Correo electrónico'];
+            const grupo = nombreCambio && mailCambio ? 'Regla 2b/2c - Actualizar Nombre y Mail admin'
+                        : nombreCambio ? 'Actualizar nombre'
+                        : 'Actualizar mail admin';
+            const row = {'External ID':odoo['ExternalID']||'', Referencia:id, Nombre:nombreFinal, NIF:odoo['NIF']||'', 'Tipo de identificación':odoo['TipoIdentificacion']||'', 'Correo electrónico':mailFinal, 'Tipo de Responsabilidad AFIP':odoo['Tipo de Responsabilidad AFIP'], 'Enlace a página web':odoo['Enlace a página web']||enlaceDash, Activo:'TRUE', 'Grupo (no importar)':grupo, 'Comentario (no importar)':construirComentario(mailFinal, mailCambio)};
+            if(mailCambio){ r2c_mailadmin.push(row); } else { r2b_nombre.push(row); }
+            output2.push(row);
+            const detalle = (nombreCambio ? 'Nombre de cuenta cambió en Dash. ' : '') + (mailCambio ? 'El mail admin ya no es el vigente (cambió el administrador de la cuenta).' : '');
+            log1(nombreCambio && mailCambio ? '2b/2c' : (mailCambio ? '2c' : '2b'), 'Actualizar ' + (nombreCambio && mailCambio ? 'nombre y mail admin' : nombreCambio ? 'nombre' : 'mail admin'), detalle.trim());
+          } else {
+            r1_ok.push({referencia:id, id_odoo:odoo['ID'], razon_social:odoo['Nombre'], nota:'Consumidor Final sin datos fiscales en Dash'});
+            log1('Aprobado', 'Sin acción', 'Consumidor Final ya cargado, sin datos fiscales en Dash ni Metabase, mail admin vigente');
+          }
+        } else {
+          const row = buildAltaRow({
+            nombre: accRow['Nombre'], tipoIdent: 'Sigd', nif: '',
+            mail: mailAdmin, huboIntentoAdmin: true, referencia: id, enlace: enlaceDash, grupo: 'Sin datos (Sigd)'
+          });
+          r6_alta_cf.push(row); output3.push(row);
+          log1('6', 'Crear contacto (Consumidor Final)', 'Sin billing ni Metabase, alta como Consumidor Final');
+        }
+      }
+    });
+
+    // Las filas que necesitan revisión (mail faltante o con formato inválido) se sacan de los
+    // outputs de importación y se muestran directo en el banner de alerta, con el detalle completo.
+    const revisionesPendientes = [];
+    function extraerRevisiones(rows, origen){
+      const limpias = [];
+      rows.forEach(r => {
+        const comentario = r['Comentario (no importar)'];
+        if(comentario){
+          revisionesPendientes.push({ Origen: origen, Referencia: r['Referencia'], Nombre: r['Nombre'], Comentario: comentario });
+        } else {
+          const copia = Object.assign({}, r);
+          delete copia['Comentario (no importar)'];
+          limpias.push(copia);
+        }
+      });
+      return limpias;
+    }
+    output2 = extraerRevisiones(output2, 'Output 2');
+    output3 = extraerRevisiones(output3, 'Output 3');
+
+    window.__vcBuckets = {
+      output1, output2, output3,
+      r1_ok, r1b_reactivar, r2_mail, r2b_nombre, r2c_mailadmin, r3a_baja, r3a_alta_pend, r3b_update, r4a_update, r4b_alta, r5_alta, r6_alta_cf, excepciones, cuentasInternas
+    };
+
+    const totalAR = accountsAR.size;
+    const summary = document.getElementById('results');
+    summary.style.display = 'block';
+    const cuentasActualizar = r2_mail.length + r2b_nombre.length + r2c_mailadmin.length + r3b_update.length + r4a_update.length;
+    const cuentasCrear = r4b_alta.length + r5_alta.length + r6_alta_cf.length;
+    const bannerRevision = revisionesPendientes.length > 0
+      ? '<div class="vc-note" style="background:#fef9c3;color:#854d0e;border-radius:8px;padding:10px 14px;margin:0 0 10px;font-weight:600;">⚠️ ' + revisionesPendientes.length + ' cuenta' + (revisionesPendientes.length===1?'':'s') + ' necesita' + (revisionesPendientes.length===1?'':'n') + ' revisión manual antes de importar — no está' + (revisionesPendientes.length===1?'':'n') + ' incluida' + (revisionesPendientes.length===1?'':'s') + ' en los outputs:' +
+          '<ul style="margin:8px 0 0;padding-left:18px;font-weight:400;">' +
+            revisionesPendientes.map(r => '<li>[' + r.Origen + '] <strong>' + (r.Nombre || r.Referencia) + '</strong> (Ref. ' + r.Referencia + '): ' + r.Comentario + '</li>').join('') +
+          '</ul></div>'
+      : '';
+    const bannerInternas = cuentasInternas.length > 0
+      ? '<div class="vc-note" style="background:#e0e7ff;color:#3730a3;border-radius:8px;padding:10px 14px;margin:0 0 14px;font-weight:600;">🏢 ' + cuentasInternas.length + ' cuenta' + (cuentasInternas.length===1?'':'s') + ' interna' + (cuentasInternas.length===1?'':'s') + ' detectada' + (cuentasInternas.length===1?'':'s') + ' (mail @fu.do / @deli.com.br, Estado comercial Activo) — excluida' + (cuentasInternas.length===1?'':'s') + ' del análisis, no se crea ni se modifica en Odoo. La modificación de su estado en Dash se hace aparte, fuera de esta herramienta.<ul style="margin:8px 0 0;padding-left:18px;font-weight:400;">' +
+          cuentasInternas.map(c => '<li>Cuenta interna detectada: <strong>' + (c.nombre||c.referencia) + '</strong> — <a href="' + c.link + '" target="_blank" style="color:#3730a3;">' + c.link + '</a></li>').join('') +
+        '</ul></div>'
+      : '';
+    const banner = bannerRevision + bannerInternas;
+    summary.innerHTML =
+      banner +
+      '<div class="vc-summary">' +
+        '<div class="vc-metric" style="background:var(--naranja);"><span class="n" style="color:#fff;">' + totalAR + '</span><span class="l" style="color:#fff;">Cuentas AR (Dash)</span></div>' +
+        '<div class="vc-metric"><span class="n" style="color:#15803d;">' + r1_ok.length + '</span><span class="l">OK, sin acción</span></div>' +
+        '<div class="vc-metric"><span class="n" style="color:#0e7490;">' + r1b_reactivar.length + '</span><span class="l">Reactivar (estaba archivado)</span></div>' +
+        '<div class="vc-metric"><span class="n" style="color:#854d0e;">' + cuentasActualizar + '</span><span class="l">A actualizar (mismo contacto)</span></div>' +
+        '<div class="vc-metric"><span class="n" style="color:#b45309;">' + r3a_baja.length + '</span><span class="l">Baja + Alta (reemplazo)</span></div>' +
+        '<div class="vc-metric"><span class="n" style="color:#7e22ce;">' + cuentasCrear + '</span><span class="l">A crear (contacto nuevo)</span></div>' +
+        '<div class="vc-metric"><span class="n" style="color:#991b1b;">' + excepciones.length + '</span><span class="l">Excepciones</span></div>' +
+      '</div>' +
+      '<p class="vc-note" style="margin:-6px 0 16px;">Verificación: ' + r1_ok.length + ' + ' + r1b_reactivar.length + ' + ' + cuentasActualizar + ' + ' + r3a_baja.length + ' + ' + cuentasCrear + ' + ' + excepciones.length + ' + ' + cuentasInternas.length + ' = ' + (r1_ok.length + r1b_reactivar.length + cuentasActualizar + r3a_baja.length + cuentasCrear + excepciones.length + cuentasInternas.length) + ' (debería ser igual a ' + totalAR + ', el último término son las cuentas internas excluidas). Nota: cada cuenta de "Baja + Alta" genera 2 filas de salida (una en Output 2, una en Output 3), por eso no se suma directo a esos totales. "Reactivar" también entra en el Output 2 (usa Activo=TRUE, resto de los datos sin cambios).</p>' +
+      section('output1', 'Output 1 — Análisis completo (backup)', output1, 'Una fila por cada cuenta AR de Dash, con la regla y acción aplicada. Guardalo como respaldo de cada corrida.', 'paid', 'Backup') +
+      section('output2', 'Output 2 — Actualizar contactos existentes en Odoo', output2, 'Incluye reglas 1b (reactivar), 2, 2b (nombre), 2c (mail admin), 3a (baja), 3b y 4a. Al importar en Odoo, mapeá la columna "External ID" al campo External ID para que actualice el contacto en vez de crear uno nuevo. La columna "Tipo de identificación" viaja junto con el NIF en las reglas 3b y 4a para evitar el error de "longitud inválida" en Odoo. Las cuentas que necesitan revisión manual (mail faltante o inválido) NO están acá — mirá el banner de arriba. Las cuentas de la regla 3a aportan 1 fila acá (la baja) y otra fila más en el Output 3 (la alta) — por eso ' + output2.length + ' filas no equivale a ' + output2.length + ' cuentas distintas.', 'pending', 'Actualizar') +
+      section('output3', 'Output 3 — Alta de contactos nuevos en Odoo', output3, 'Incluye reglas 3a (alta), 4b, 5 y 6. Sin columna ID: Odoo los va a crear como contactos nuevos. Las cuentas que necesitan revisión manual (mail faltante o inválido) NO están acá — mirá el banner de arriba. Las ' + r3a_alta_pend.length + ' filas de la regla 3a acá son la contraparte de las bajas del Output 2 (mismo cuenta, contacto nuevo).', 'refunded', 'Alta') +
+      section('excepciones', 'Excepciones (Referencia duplicada en Odoo, etc.)', excepciones, 'Quedan fuera de los outputs 2 y 3 — requieren revisión manual.', 'cancelled', 'Excepción');
+
+    log.textContent = 'Listo — ' + totalAR + ' cuentas AR procesadas.';
+  });
+
+  // --- Etapa 2 · Dash: importar contactos que Odoo ya tiene pero Dash todavía no ---
+  function mapSituacionInversa(raw){
+    if(!raw) return '';
+    const s = String(raw).trim().toLowerCase();
+    const map = {
+      'iva responsable inscripto': 'Responsable inscripto',
+      'responsable monotributo': 'Monotributo',
+      'consumidor final': 'Consumidor final',
+      'iva sujeto exento': 'Exento'
+    };
+    return map[s] || raw;
+  }
+
+  document.getElementById('btn-process-2').addEventListener('click', function(){
+    const log2 = document.getElementById('proc-log-2');
+    log2.textContent = 'Procesando...';
+
+    const billingByAcc2 = new Map();
+    state2.billing.forEach(r => {
+      if((r['País']||'').trim() !== 'Argentina') return;
+      const id = normId(r['ID']);
+      if(id) billingByAcc2.set(id, r);
+    });
+
+    const accountsByAcc2 = new Map();
+    state2.accounts.forEach(r => {
+      if((r['País']||'').trim() !== 'Argentina') return;
+      const id = normId(r['ID']);
+      if(id) accountsByAcc2.set(id, r);
+    });
+
+    const odooByRef2 = new Map();
+    state2.odoo.forEach(r => {
+      const refRaw = String(r['Referencia'] || '').trim();
+      if(/_old$/i.test(refRaw)) return;
+      if(r['Activo'] === false) return;
+      const ref = normId(refRaw);
+      if(!ref) return;
+      if(!odooByRef2.has(ref)) odooByRef2.set(ref, r); // si hay duplicados, se queda con el primero
+    });
+
+    const CAMPOS_DASH = ['ID','Tipo de identificación','Código','Razón social','Ciudad','Estado','Domicilio','Situación ante el impuesto','Email','Código postal'];
+    const completos = [], incompletos = [];
+
+    // Limpieza de texto para que no rompa el CSV de Dash: saca comillas y cambia comas por punto y coma.
+    function limpiarTextoDash(v){
+      return String(v == null ? '' : v).replace(/["']/g, '').replace(/,/g, ';');
+    }
+
+    odooByRef2.forEach((odoo, id) => {
+      // La cuenta tiene que existir en el reporte de Accounts (activas) — si no está ahí,
+      // no corresponde tocar nada en Dash, aunque Odoo tenga el NIF cargado.
+      if(!accountsByAcc2.has(id)) return;
+
+      const nif = String(odoo['NIF'] || '').trim();
+      if(!nif) return; // sin NIF en Odoo, no hay nada para pasar a Dash
+
+      const billing = billingByAcc2.get(id);
+      const billingTieneCodigo = billing && String(billing['Código'] || '').trim();
+      if(billingTieneCodigo) return; // Dash ya tiene el dato, no hace falta importar nada
+
+      // Si Odoo dice "Consumidor Final" pero ya tiene un NIF real cargado, es una inconsistencia —
+      // se corrige a Monotributo (la situación más común en estos casos).
+      let situacion = mapSituacionInversa(odoo['Tipo de Responsabilidad AFIP']);
+      if(situacion.trim().toLowerCase() === 'consumidor final') situacion = 'Monotributo';
+
+      const fila = {
+        'ID': id,
+        'Tipo de identificación': limpiarTextoDash(odoo['TipoIdentificacion']),
+        'Código': limpiarTextoDash(nif),
+        'Razón social': limpiarTextoDash(odoo['Nombre']),
+        'Ciudad': limpiarTextoDash(findKeyCI(odoo, 'Ciudad')),
+        'Estado': limpiarTextoDash(limpiarSufijoAR(findKeyCI(odoo, 'Provincia'))),
+        'Domicilio': limpiarTextoDash(findKeyCI(odoo, 'Calle')),
+        'Situación ante el impuesto': limpiarTextoDash(situacion),
+        'Email': limpiarTextoDash(odoo['Correo electrónico']),
+        'Código postal': limpiarTextoDash(findKeyCI(odoo, 'C.P.') || findKeyCI(odoo, 'CP') || findKeyCI(odoo, 'Código postal'))
+      };
+
+      let faltaAlgo = false;
+      const filaMarcada = {};
+      CAMPOS_DASH.forEach(campo => {
+        const val = fila[campo];
+        if(val === undefined || val === null || String(val).trim() === ''){
+          filaMarcada[campo] = '⚠ FALTA ' + campo.toUpperCase();
+          faltaAlgo = true;
+        } else {
+          filaMarcada[campo] = val;
+        }
+      });
+
+      if(faltaAlgo){ incompletos.push(filaMarcada); }
+      else { completos.push(fila); }
+    });
+
+    window.__vcBuckets = window.__vcBuckets || {};
+    window.__vcBuckets['dash_completos'] = completos;
+    window.__vcBuckets['dash_incompletos'] = incompletos;
+
+    const results2 = document.getElementById('results-2');
+    results2.style.display = 'block';
+    const banner2 = incompletos.length > 0
+      ? '<p class="vc-note" style="background:#fef9c3;color:#854d0e;border-radius:8px;padding:10px 14px;margin:0 0 14px;font-weight:600;">⚠️ ' + incompletos.length + ' cuenta' + (incompletos.length===1?'':'s') + ' con datos incompletos — revisar antes de importar.</p>'
+      : '';
+    results2.innerHTML =
+      banner2 +
+      '<div class="vc-summary">' +
+        '<div class="vc-metric" style="background:var(--naranja);"><span class="n" style="color:#fff;">' + (completos.length + incompletos.length) + '</span><span class="l" style="color:#fff;">Cuentas a importar a Dash</span></div>' +
+        '<div class="vc-metric"><span class="n" style="color:#15803d;">' + completos.length + '</span><span class="l">Listas para importar</span></div>' +
+        '<div class="vc-metric"><span class="n" style="color:#854d0e;">' + incompletos.length + '</span><span class="l">Con datos faltantes</span></div>' +
+      '</div>' +
+      sectionCsv('dash_completos', 'Import a Dash — listas para importar', completos, 'CSV separado por comas, con las 9 columnas que pide Dash. Todos los campos están completos.', 'paid', 'Completo') +
+      sectionCsv('dash_incompletos', 'Revisar antes de importar', incompletos, 'Cada celda vacía quedó marcada con el campo que falta (ej. "FALTA CIUDAD"). Completá a mano en Odoo o Dash y volvé a correr el análisis.', 'cancelled', 'Incompleto');
+
+    log2.textContent = 'Listo — ' + (completos.length + incompletos.length) + ' cuentas para Dash.';
+  });
+
+  // Panel de reglas: de solo lectura, cambia según la solapa activa.
+  let etapaActiva = 1;
+  function renderReglas(){
+    const cont = document.getElementById('reglas-cards');
+    const reglas = etapaActiva === 1 ? REGLAS_ETAPA1 : REGLAS_ETAPA2;
+    cont.innerHTML = reglas.map(r =>
+      '<div class="vc-rule-card"><h4>' + r.titulo + '</h4><p>' + r.texto + '</p></div>'
+    ).join('');
+  }
+
+  const SHEET_PROXIMAMENTE_URL = 'https://docs.google.com/spreadsheets/d/1e6qAnhdD1PQefr--q0vfg-6tp1dechYXiNKY0lldV8M/gviz/tq?tqx=out:csv&gid=0';
+  let proximamenteCargado = false;
+
+  window.cargarProximamente = async function(){
+    const status = document.getElementById('proximamente-status');
+    const cont = document.getElementById('proximamente-cards');
+    status.textContent = 'Cargando desde Google Sheets...';
+    try{
+      const resp = await fetch(SHEET_PROXIMAMENTE_URL);
+      if(!resp.ok) throw new Error('HTTP ' + resp.status);
+      const text = await resp.text();
+      const filas = parseCsvRows(text, ',');
+      if(!filas.length){
+        cont.innerHTML = '<p class="vc-note">El Sheet no tiene filas todavía.</p>';
+      } else {
+        cont.innerHTML = filas.map(f => {
+          const titulo = f['Título'] || f['Titulo'] || '(sin título)';
+          const concepto = f['Concepto'] || '';
+          const importante = f['Importante'] || '';
+          return '<div class="vc-rule-card"><h4>' + titulo + '</h4><p>' + concepto + '</p>' +
+            (importante ? '<p style="margin-top:6px;color:var(--naranja);font-weight:600;">⚠ ' + importante + '</p>' : '') +
+            '</div>';
+        }).join('');
+      }
+      status.textContent = '';
+      proximamenteCargado = true;
+    } catch(err){
+      status.textContent = '';
+      cont.innerHTML = '<p class="vc-note" style="background:#fee2e2;color:#991b1b;border-radius:8px;padding:10px 14px;">No se pudo cargar el Sheet (' + err.message + '). ' +
+        'Si el error es de CORS, hace falta publicarlo: en el Sheet, andá a <strong>Archivo → Compartir → Publicar en la web</strong> (es distinto de "Compartir" común), publicá la hoja como CSV, y avisá para actualizar el link acá.</p>';
+    }
+  };
+
+  window.vcSetCompania = function(valor){
+    document.getElementById('etapa1-comandarina_srl').style.display = valor === 'comandarina_srl' ? '' : 'none';
+    document.getElementById('etapa1-proximamente').style.display = valor === 'comandarina_srl' ? 'none' : '';
+  };
+
+  window.vcSetEtapa = function(n){
+    etapaActiva = n;
+    document.getElementById('tab-etapa1').classList.toggle('active', n === 1);
+    document.getElementById('tab-etapa2').classList.toggle('active', n === 2);
+    document.getElementById('tab-etapa3').classList.toggle('active', n === 3);
+    document.getElementById('etapa1-panel').style.display = n === 1 ? '' : 'none';
+    document.getElementById('etapa2-panel').style.display = n === 2 ? '' : 'none';
+    document.getElementById('etapa3-panel').style.display = n === 3 ? '' : 'none';
+    document.getElementById('sec-reglas-wrap').style.display = n === 3 ? 'none' : '';
+    if(n !== 3) renderReglas();
+    else if(!proximamenteCargado) cargarProximamente();
+  };
+
+  renderReglas();
+})();
+</script>
+</body>
+</html>
