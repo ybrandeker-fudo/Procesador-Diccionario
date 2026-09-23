@@ -565,6 +565,20 @@
     for(const k in obj){ if(k.toLowerCase() === target) return obj[k]; }
     return undefined;
   }
+  // Prueba una lista de nombres de columna candidatos (Odoo viene renombrando estos campos entre
+  // versiones/locales) y devuelve el primero que tenga valor. Agregar acá el nombre nuevo cuando
+  // Odoo vuelva a cambiarlo, en vez de parchar cada punto donde se usa el campo.
+  function findKeyCIAny(obj, names){
+    for(const n of names){
+      const v = findKeyCI(obj, n);
+      if(v !== undefined && v !== '') return v;
+    }
+    return undefined;
+  }
+  const NOMBRES_NIF = ['NIF', 'Identification Number', 'Número de Identificación', 'Numero de Identificacion'];
+  const NOMBRES_RESPONSABILIDAD_AFIP = ['Tipo de Responsabilidad AFIP', 'ARCA Responsibility Type', 'Tipo de responsabilidad de ARCA'];
+  const NOMBRES_ENLACE = ['Enlace a página web', 'Enlace del sitio web'];
+  const NOMBRES_PROVINCIA = ['Provincia', 'Estado'];
   // Varios campos de Odoo (Tipo de Identificación, Provincia) vienen con sufijo " (AR)" cuando
   // el campo es un many2one con país asociado (ej: "CUIT (AR)", "Río Negro (AR)"). Se limpia acá.
   function limpiarSufijoAR(texto){
@@ -589,9 +603,9 @@
         const base = Object.assign({ ExternalID: externalDeDup, TipoIdentificacion: tipoIdent(r) }, r);
         // Odoo renombró estos 3 campos en una version mas nueva — se completan con el nombre
         // alternativo si el campo original ("NIF", etc.) no vino en el export.
-        if(base['NIF'] === undefined || base['NIF'] === '') base['NIF'] = findKeyCI(r, 'Identification Number') || findKeyCI(r, 'NIF') || '';
-        if(base['Tipo de Responsabilidad AFIP'] === undefined || base['Tipo de Responsabilidad AFIP'] === '') base['Tipo de Responsabilidad AFIP'] = findKeyCI(r, 'ARCA Responsibility Type') || findKeyCI(r, 'Tipo de Responsabilidad AFIP') || '';
-        if(base['Enlace a página web'] === undefined || base['Enlace a página web'] === '') base['Enlace a página web'] = findKeyCI(r, 'Enlace del sitio web') || findKeyCI(r, 'Enlace a página web') || '';
+        if(base['NIF'] === undefined || base['NIF'] === '') base['NIF'] = findKeyCIAny(r, NOMBRES_NIF) || '';
+        if(base['Tipo de Responsabilidad AFIP'] === undefined || base['Tipo de Responsabilidad AFIP'] === '') base['Tipo de Responsabilidad AFIP'] = findKeyCIAny(r, NOMBRES_RESPONSABILIDAD_AFIP) || '';
+        if(base['Enlace a página web'] === undefined || base['Enlace a página web'] === '') base['Enlace a página web'] = findKeyCIAny(r, NOMBRES_ENLACE) || '';
         return base;
       });
     }
@@ -1395,7 +1409,7 @@
         'Código': limpiarTextoDash(nif),
         'Razón social': limpiarTextoDash(odoo['Nombre']),
         'Ciudad': limpiarTextoDash(findKeyCI(odoo, 'Ciudad')),
-        'Estado': limpiarTextoDash(limpiarSufijoAR(findKeyCI(odoo, 'Provincia'))),
+        'Estado': limpiarTextoDash(limpiarSufijoAR(findKeyCIAny(odoo, NOMBRES_PROVINCIA))),
         'Domicilio': limpiarTextoDash(findKeyCI(odoo, 'Calle')),
         'Situación ante el impuesto': limpiarTextoDash(situacion),
         'Email': limpiarTextoDash(odoo['Correo electrónico']),
