@@ -203,6 +203,7 @@
     { titulo: 'Output 1 — Análisis completo', texto: 'Una fila por cada cuenta AR con la regla y acción aplicada. Sirve de backup/auditoría de cada corrida.' },
     { titulo: 'Output 2 — Actualizar contactos en Odoo', texto: 'Incluye reglas 1b, 2, 2b, 3a (baja), 3b y 4a. Solo columna "External ID" (sin ID de base de datos) — al importar, mapear "External ID" al campo External ID para que actualice en vez de crear. Trae columna "Grupo" (qué regla aplicó) y "Comentario" (avisos a revisar antes de importar, ninguna se pisa).' },
     { titulo: 'Output 3 — Alta de contactos en Odoo', texto: 'Incluye reglas 3a (alta), 4b, 5 y 6. Plantilla Comandarina, sin columna ID. Sub-casos: CUIT, DNI (con domicilio/ciudad), Sin datos (Sigd), 4b (Metabase), 3a-alta. Prioridad de mail: Billing.Email si existe, si no Admin (Dash). Trae columna "Comentario" con avisos a revisar antes de importar.' },
+    { titulo: 'Validación de CUIT y DNI (Output 2 y 3)', texto: 'Antes de descargar, se controla cada NIF con el mismo criterio que usa Odoo al importar (y que bloquea el archivo completo si falla una sola fila): para CUIT, el dígito verificador (11 dígitos, módulo 11); para DNI, que tenga 7 u 8 dígitos. Los inválidos NO se sacan del output: quedan con la celda del NIF pintada de rojo (en pantalla y en el Excel descargado) y listados en un banner con el motivo, para verificarlos en Nosis y corregirlos antes de importar.' },
     { titulo: 'Cómo se elige el mail del admin (todas las reglas)', texto: 'Entre todos los admins de una cuenta (reporte admin_emails.csv, que ya viene filtrado por Dash a solo usuarios con Admin = Sí), se prioriza primero que el mail tenga formato válido (no sirve el usuario de login interno de Dash, tipo "dev@milanpunto" — ahí no llegan las facturas), y recién entre los que tienen mail válido, el de más logins. Si ninguno tiene mail válido, se usa igual el de más logins (va a quedar marcado para revisión por formato inválido).' },
     { titulo: 'Revisión manual por mail (Output 2 y 3)', texto: 'Si la cuenta no tiene ningún admin en absoluto (0 filas en admin_emails.csv — la cuenta nunca tuvo un usuario marcado Admin = Sí en Dash, hay que avisarle al cliente para que designe uno), o si el mail resuelto tiene tildes, espacios de más, o formato inválido, esa cuenta NO se incluye en el Output 2/3 — queda afuera del archivo de importación. El banner de arriba muestra el detalle completo (cuenta + qué falta) directamente, para resolverlo a mano antes de la próxima corrida.' },
     { titulo: 'Mapeo de situación fiscal (Dash/Metabase → Odoo)', texto: 'Responsable inscripto / responsable_inscripto → IVA Responsable Inscripto. Monotributo / monotributista → Responsable Monotributo. Consumidor final → Consumidor Final. Exento → IVA Sujeto Exento. (Solo aplica en Output 2, no en Output 3).' }
@@ -390,6 +391,41 @@
     if(v==null || v==='') return null;
     const n = parseInt(String(v).trim(), 10);
     return isNaN(n) ? null : String(n);
+  }
+
+  // Valida un CUIT/CUIL argentino: 11 digitos y digito verificador (modulo 11). Es el mismo control
+  // que hace Odoo al importar ("El dígito de validación no es válido para CUIT") y bloquea todo el archivo.
+  function cuitValido(valor){
+    const c = String(valor == null ? '' : valor).replace(/\D/g, '');
+    if(c.length !== 11) return false;
+    const pesos = [5,4,3,2,7,6,5,4,3,2];
+    let suma = 0;
+    for(let i = 0; i < 10; i++) suma += parseInt(c[i], 10) * pesos[i];
+    const r = 11 - (suma % 11);
+    const dv = r === 11 ? 0 : (r === 10 ? 9 : r);
+    return dv === parseInt(c[10], 10);
+  }
+  // Valida un DNI argentino como lo hace Odoo: solo dígitos (se aceptan puntos, guiones y espacios
+  // como separadores) y largo de 7 u 8 dígitos. Si no, Odoo tira "Longitud inválida para DNI".
+  function dniValido(valor){
+    const d = String(valor == null ? '' : valor).replace(/[\s.\-]/g, '');
+    return /^\d{7,8}$/.test(d);
+  }
+  // Marca (sin cambiar los datos) las filas con CUIT o DNI inválido: guarda en la fila una propiedad
+  // no enumerable `_rojo` con las columnas a pintar en rojo, y las suma al acumulador para el banner.
+  function marcarIdentificacionesInvalidas(rows, origen, acumulador){
+    rows.forEach(r => {
+      const tipo = String(r['Tipo de identificación'] || '').trim().toUpperCase();
+      const nif = r['NIF'];
+      if(!nif) return;
+      let motivo = '';
+      if(tipo === 'CUIT' && !cuitValido(nif)) motivo = 'dígito verificador inválido';
+      else if(tipo === 'DNI' && !dniValido(nif)) motivo = 'largo inválido (el DNI debe tener 7 u 8 dígitos)';
+      if(motivo){
+        Object.defineProperty(r, '_rojo', { value: ['NIF'], enumerable: false, configurable: true });
+        acumulador.push({ Origen: origen, Referencia: r['Referencia'], Nombre: r['Nombre'], Tipo: tipo, NIF: nif, Motivo: motivo });
+      }
+    });
   }
 
   // --- Lector XLSX propio (zip + parser por regex, sin DOMParser: mucho mas rapido con archivos grandes
@@ -802,7 +838,8 @@
       const rn = ri + 2;
       sheetRows += '<row r="' + rn + '">' + cols.map((c, ci) => {
         const val = r[c] == null ? '' : String(r[c]);
-        return '<c r="' + colLetter(ci) + rn + '" t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(val) + '</t></is></c>';
+        const estilo = (r._rojo && r._rojo.indexOf(c) !== -1) ? ' s="1"' : '';
+        return '<c r="' + colLetter(ci) + rn + '"' + estilo + ' t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(val) + '</t></is></c>';
       }).join('') + '</row>';
     });
     const sheetXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>' + sheetRows + '</sheetData></worksheet>';
@@ -810,7 +847,7 @@
     const rootRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
     const workbookXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="' + xmlEsc(sheetName) + '" sheetId="1" r:id="rId1"/></sheets></workbook>';
     const workbookRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
-    const stylesXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts><fills count="1"><fill><patternFill patternType="none"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs></styleSheet>';
+    const stylesXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFF0000"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs></styleSheet>';
     const enc = new TextEncoder();
     const files = [
       { name: '[Content_Types].xml', data: enc.encode(contentTypes) },
@@ -897,7 +934,10 @@
     const cols = Object.keys(rows[0]);
     const shown = rows.slice(0, limit || 15);
     let html = '<div class="vc-table-wrap"><table class="vc-t"><thead><tr>' + cols.map(c=>'<th>'+c+'</th>').join('') + '</tr></thead><tbody>';
-    shown.forEach(r => { html += '<tr>' + cols.map(c => '<td>' + (r[c]==null?'':String(r[c])) + '</td>').join('') + '</tr>'; });
+    shown.forEach(r => { html += '<tr>' + cols.map(c => {
+      const rojo = r._rojo && r._rojo.indexOf(c) !== -1;
+      return '<td' + (rojo ? ' style="background:#ff0000;color:#fff;font-weight:700;"' : '') + '>' + (r[c]==null?'':String(r[c])) + '</td>';
+    }).join('') + '</tr>'; });
     html += '</tbody></table></div>';
     if(rows.length > shown.length) html += '<p style="font-size:11px;color:#9ca3af;margin-top:6px;">Mostrando ' + shown.length + ' de ' + rows.length + '.</p>';
     return html;
@@ -1295,6 +1335,13 @@
     output2 = extraerRevisiones(output2, 'Output 2');
     output3 = extraerRevisiones(output3, 'Output 3');
 
+    // CUIT (dígito verificador) o DNI (largo) inválidos: quedan en el archivo, con la celda del NIF
+    // pintada de rojo para verificarlos a mano (ej. en Nosis) antes de importar. Odoo bloquea el
+    // import entero si hay alguno.
+    const idsInvalidos = [];
+    marcarIdentificacionesInvalidas(output2, 'Output 2', idsInvalidos);
+    marcarIdentificacionesInvalidas(output3, 'Output 3', idsInvalidos);
+
     window.__vcBuckets = {
       output1, output2, output3,
       r1_ok, r1b_reactivar, r2_mail, r2b_nombre, r2c_mailadmin, r3a_baja, r3a_alta_pend, r3b_update, r4a_update, r4b_alta, r5_alta, r6_alta_cf, excepciones, cuentasInternas
@@ -1316,7 +1363,13 @@
           cuentasInternas.map(c => '<li>Cuenta interna detectada: <strong>' + (c.nombre||c.referencia) + '</strong> — <a href="' + c.link + '" target="_blank" style="color:#3730a3;">' + c.link + '</a></li>').join('') +
         '</ul></div>'
       : '';
-    const banner = bannerRevision + bannerInternas;
+    const bannerCuit = idsInvalidos.length > 0
+      ? '<div class="vc-note" style="background:#fee2e2;color:#991b1b;border-radius:8px;padding:10px 14px;margin:0 0 10px;font-weight:600;">🔴 ' + idsInvalidos.length + ' ' + (idsInvalidos.length===1 ? 'identificación inválida' : 'identificaciones inválidas') + ' (CUIT / DNI) — ' + (idsInvalidos.length===1?'está':'están') + ' en los outputs con el NIF pintado en rojo. Verificalo' + (idsInvalidos.length===1?'':'s') + ' (ej. en Nosis) y corregilo' + (idsInvalidos.length===1?'':'s') + ' antes de importar, porque Odoo bloquea el archivo entero si hay alguno:' +
+          '<ul style="margin:8px 0 0;padding-left:18px;font-weight:400;">' +
+            idsInvalidos.map(c => '<li>[' + c.Origen + '] <strong>' + (c.Nombre || c.Referencia) + '</strong> (Ref. ' + c.Referencia + '): ' + c.Tipo + ' ' + c.NIF + ' — ' + c.Motivo + '</li>').join('') +
+          '</ul></div>'
+      : '';
+    const banner = bannerRevision + bannerCuit + bannerInternas;
     summary.innerHTML =
       banner +
       '<div class="vc-summary">' +
